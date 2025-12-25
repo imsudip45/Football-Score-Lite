@@ -219,17 +219,17 @@ export default function MatchStatsLowerThird({
         .anim-lt-top-in { animation: ltTopIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards 0s; transform: translateY(100%); opacity: 0; }
         .anim-lt-top-out { animation: ltTopOut 0.25s cubic-bezier(0.7, 0, 0.84, 0) forwards 0s; }
         
-        /* Timer box animation - slides out from behind the main box (starts hidden at 0, slides up to -top-10) */
+        /* Timer box animation - slides up from behind the main bar (starts hidden at bar level, slides up to final position) */
         @keyframes timerBoxIn {
-          from { transform: translateY(10px); opacity: 1; }
+          from { transform: translateY(40px); opacity: 1; }
           to { transform: translateY(0); opacity: 1; }
         }
         @keyframes timerBoxOut {
           from { transform: translateY(0); opacity: 1; }
-          to { transform: translateY(10px); opacity: 1; }
+          to { transform: translateY(40px); opacity: 1; }
         }
-        .anim-timer-box-in { animation: timerBoxIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards 0s; transform: translateY(10px); }
-        .anim-timer-box-out { animation: timerBoxOut 0.3s cubic-bezier(0.7, 0, 0.84, 0) forwards; }
+        .anim-timer-box-in { animation: timerBoxIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards 0s; transform: translateY(40px); }
+        .anim-timer-box-out { animation: timerBoxOut 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards; }
         
         /* Dynamic pattern animation keyframes */
         ${getPatternAnimationCSS()}
