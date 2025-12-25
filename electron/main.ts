@@ -83,7 +83,7 @@ function createMainWindow() {
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:3000')
-    mainWindow.webContents.openDevTools()
+    // mainWindow.webContents.openDevTools() // Disabled - can be opened manually with F12
   } else {
     // In production, load the static export from the app root
     const appPath = getAppPath()
@@ -96,10 +96,7 @@ function createMainWindow() {
 
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show()
-    // Open DevTools in production for debugging
-    if (!isDev) {
-      mainWindow?.webContents.openDevTools()
-    }
+    // DevTools disabled - can be opened manually with F12 if needed
   })
 
   mainWindow.on('closed', () => {
