@@ -219,17 +219,17 @@ export default function MatchStatsLowerThird({
         .anim-lt-top-in { animation: ltTopIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards 0s; transform: translateY(100%); opacity: 0; }
         .anim-lt-top-out { animation: ltTopOut 0.25s cubic-bezier(0.7, 0, 0.84, 0) forwards 0s; }
         
-        /* Timer box animation - comes up from below immediately when content phase starts */
+        /* Timer box animation - slides out from behind the main box (starts hidden at 0, slides up to -top-10) */
         @keyframes timerBoxIn {
-          from { transform: translateY(100%); opacity: 0; }
+          from { transform: translateY(10px); opacity: 1; }
           to { transform: translateY(0); opacity: 1; }
         }
         @keyframes timerBoxOut {
           from { transform: translateY(0); opacity: 1; }
-          to { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(10px); opacity: 1; }
         }
-        .anim-timer-box-in { animation: timerBoxIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards 0s; transform: translateY(100%); opacity: 0; }
-        .anim-timer-box-out { animation: timerBoxOut 0.25s cubic-bezier(0.7, 0, 0.84, 0) forwards; }
+        .anim-timer-box-in { animation: timerBoxIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards 0s; transform: translateY(10px); }
+        .anim-timer-box-out { animation: timerBoxOut 0.3s cubic-bezier(0.7, 0, 0.84, 0) forwards; }
         
         /* Dynamic pattern animation keyframes */
         ${getPatternAnimationCSS()}
@@ -416,17 +416,20 @@ export default function MatchStatsLowerThird({
             </div>
 
             {/* Score Block with Timer Box above */}
-            <div className="relative flex h-full gap-1">
-              {/* Timer Box - positioned above score boxes, z-index lower so it appears from behind */}
+            <div className="relative flex h-full gap-1 overflow-visible">
+              {/* Timer Box - positioned above score boxes, slides out from behind main bar */}
               {timer && (
                 <div 
-                  className={`absolute -top-10 left-0 right-0 h-10 flex items-center justify-center overflow-hidden -z-10 ${
+                  className={`absolute -top-10 left-0 right-0 h-10 flex items-center justify-center ${
                     phase === 'logos-split' || phase === 'content' ? 'anim-timer-box-in' : 
                     phase === 'scorers-out' ? '' :
                     phase === 'timer-out' ? 'anim-timer-box-out' : 
                     'opacity-0'
                   }`}
-                  style={Object.keys(getStyle('timer-box')).length > 0 ? getStyle('timer-box') : { backgroundColor: '#292a2bff' }}
+                  style={{
+                    ...(Object.keys(getStyle('timer-box')).length > 0 ? getStyle('timer-box') : { backgroundColor: '#292a2bff' }),
+                    zIndex: -1,
+                  }}
                 >
                   <span 
                     className="font-sans font-bold text-2xl tracking-wider"
