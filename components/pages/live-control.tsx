@@ -674,11 +674,12 @@ export function LiveControl() {
   }
 
   const eventPads = [
-    { id: "goal", label: "Goal", icon: Target, color: "bg-slate-700 hover:bg-slate-600 text-white" },
+    { id: "goal", label: "Goal", icon: Target, imagePath: "icons/goal.png", color: "bg-slate-700 hover:bg-slate-600 text-white" },
     {
       id: "sub",
       label: "Substitution",
       icon: RefreshCw,
+      imagePath: "icons/subs.png",
       color: "bg-slate-700 hover:bg-slate-600 text-white",
     },
     {
