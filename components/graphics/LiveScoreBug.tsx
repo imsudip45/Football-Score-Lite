@@ -241,7 +241,7 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
       `}</style>
 
       {/* Main Bar Container - uses relative positioning for layering */}
-      <div className="relative shadow-xl font-sans select-none h-14 bg-transparent overflow-visible">
+      <div className="relative font-sans select-none h-14 bg-transparent overflow-visible">
         
         {/* Content wrapper - clips content at NSL's right edge during animation, then reveals all */}
         <div 
