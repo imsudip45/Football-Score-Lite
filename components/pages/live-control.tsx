@@ -878,9 +878,14 @@ export function LiveControl() {
     )
   }
 
-  // Resolve renderer URL for network access
-  const rendererHost = typeof window === 'undefined' ? 'localhost' : window.location.hostname || 'localhost'
-  const rendererUrl = `http://${rendererHost}:3000/renderer`
+  // Resolve renderer URL for network access. Allows override via NEXT_PUBLIC_HOST for LAN/IP sharing.
+  const rendererUrl = (() => {
+    if (typeof window === 'undefined') return `http://localhost:3000/renderer`
+    const overrideHost = process.env.NEXT_PUBLIC_HOST
+    const host = overrideHost || window.location.hostname || 'localhost'
+    const port = window.location.port || '3000'
+    return `http://${host}:${port}/renderer`
+  })()
 
   return (
     <div className="mt-0 space-y-2">
@@ -956,7 +961,12 @@ export function LiveControl() {
             size="sm"
             className="gap-1 bg-transparent text-blue-400 hover:text-blue-300 border-blue-500/50"
             onClick={() => {
-              const url = commentatorNetworkUrl || `http://${window.location.hostname}:3000/commentator`
+              const url = commentatorNetworkUrl || (() => {
+                const overrideHost = process.env.NEXT_PUBLIC_HOST
+                const host = overrideHost || window.location.hostname || 'localhost'
+                const port = window.location.port || '3000'
+                return `http://${host}:${port}/commentator`
+              })()
               navigator.clipboard.writeText(url).then(() => {
                 toast.success(`Copied: ${url}`)
               }).catch(() => {
