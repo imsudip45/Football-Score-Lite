@@ -417,37 +417,39 @@ export default function MatchStatsLowerThird({
 
             {/* Score Block with Timer Box above */}
             <div className="relative flex h-full gap-1 overflow-hidden">
-              {/* Timer Box - positioned above score boxes, slides up from behind */}
+              {/* Timer Box - centered above the two score boxes, slides up from behind */}
               {timer && (
-                <div 
-                  className={`absolute -top-10 left-0 right-0 h-10 flex items-center justify-center ${
-                    phase === 'logos-split' || phase === 'content' ? 'anim-timer-box-in' : 
-                    phase === 'scorers-out' ? '' :
-                    phase === 'timer-out' ? 'anim-timer-box-out' : 
-                    'opacity-0'
-                  }`}
-                  style={{
-                    ...(Object.keys(getStyle('timer-box')).length > 0 ? getStyle('timer-box') : { backgroundColor: '#292a2bff' }),
-                    zIndex: 0,
-                  }}
-                >
-                  <span 
-                    className="font-sans font-bold text-2xl tracking-wider"
-                    style={{ color: getColor('timer-box') || '#ffffff' }}
+                <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-48 h-10 overflow-hidden">
+                  <div 
+                    className={`h-10 flex items-center justify-center ${
+                      phase === 'logos-split' || phase === 'content' ? 'anim-timer-box-in' : 
+                      phase === 'scorers-out' ? '' :
+                      phase === 'timer-out' ? 'anim-timer-box-out' : 
+                      'opacity-0'
+                    }`}
+                    style={{
+                      ...(Object.keys(getStyle('timer-box')).length > 0 ? getStyle('timer-box') : { backgroundColor: '#292a2bff' }),
+                      zIndex: 0,
+                    }}
                   >
-                    {timer.isRunning ? (
-                      // Show running timer
-                      `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`
-                    ) : (
-                      // Show period text when paused/stopped
-                      timer.period === 'ht' ? 'HALF TIME' :
-                      timer.period === 'ft' ? 'FULL TIME' :
-                      timer.period === 'pre' ? 'PRE MATCH' :
-                      timer.period === 'et1' ? 'EXTRA TIME' :
-                      timer.period === 'et2' ? 'EXTRA TIME' :
-                      `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`
-                    )}
-                  </span>
+                    <span 
+                      className="font-sans font-bold text-2xl tracking-wider"
+                      style={{ color: getColor('timer-box') || '#ffffff' }}
+                    >
+                      {timer.isRunning ? (
+                        // Show running timer
+                        `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`
+                      ) : (
+                        // Show period text when paused/stopped
+                        timer.period === 'ht' ? 'HALF TIME' :
+                        timer.period === 'ft' ? 'FULL TIME' :
+                        timer.period === 'pre' ? 'PRE MATCH' :
+                        timer.period === 'et1' ? 'EXTRA TIME' :
+                        timer.period === 'et2' ? 'EXTRA TIME' :
+                        `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`
+                      )}
+                    </span>
+                  </div>
                 </div>
               )}
               <div 
