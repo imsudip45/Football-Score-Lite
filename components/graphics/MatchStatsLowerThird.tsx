@@ -233,7 +233,7 @@ export default function MatchStatsLowerThird({
           100% { transform: translateY(80px); opacity: 0; }
         }
         .anim-timer-box-in { 
-          animation: timerBoxIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards 0.05s; 
+          animation: timerBoxIn 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards 0.05s; 
           transform: translateY(80px);
           opacity: 0;
           will-change: transform, opacity;
