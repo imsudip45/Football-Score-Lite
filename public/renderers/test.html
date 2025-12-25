@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Graphics Test</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      overflow: hidden;
+      background: #000000;
+      font-family: 'Inter', sans-serif;
+    }
+    #app {
+      width: 100vw;
+      height: 100vh;
+    }
+    .controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1000;
+      background: rgba(0,0,0,0.8);
+      padding: 10px;
+      border-radius: 8px;
+      color: white;
+    }
+    button {
+      margin: 5px;
+      padding: 8px 16px;
+      background: #14b8a6;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0d9488;
+    }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <h3>Test Controls</h3>
+    <button onclick="testScoreBug()">Show Score Bug</button>
+    <button onclick="testLowerThird()">Show Lower Third</button>
+    <button onclick="testTicker()">Show Ticker</button>
+    <button onclick="testBreaking()">Show Breaking</button>
+    <button onclick="hideAll()">Hide All</button>
+  </div>
+  <div id="app"></div>
+  <script type="module" src="/renderers/preview.js"></script>
+  <script>
+    // Test functions to manually trigger graphics
+    function testScoreBug() {
+      const testState = {
+        type: 'state',
+        data: {
+          scoreBug: {
+            visible: true,
+            homeTeam: { name: 'Manchester United', shortName: 'MUN', score: 2, color: '#DA020E' },
+            awayTeam: { name: 'Liverpool FC', shortName: 'LIV', score: 1, color: '#C8102E' },
+            timer: { minutes: 45, seconds: 30, period: '1st' },
+            possession: 'home',
+          },
+          lowerThird: { visible: false, title: '', subtitle: '' },
+          ticker: { visible: false, items: [] },
+          breakingBanner: { visible: false, text: '' },
+        }
+      }
+      window.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(testState) }))
+    }
+    
+    function testLowerThird() {
+      const testState = {
+        type: 'state',
+        data: {
+          scoreBug: { visible: false, homeTeam: {}, awayTeam: {}, timer: {}, possession: null },
+          lowerThird: {
+            visible: true,
+            title: 'Erik ten Hag',
+            subtitle: 'Head Coach • Manchester United',
+            teamColor: '#DA020E'
+          },
+          ticker: { visible: false, items: [] },
+          breakingBanner: { visible: false, text: '' },
+        }
+      }
+      window.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(testState) }))
+    }
+    
+    function testTicker() {
+      const testState = {
+        type: 'state',
+        data: {
+          scoreBug: { visible: false, homeTeam: {}, awayTeam: {}, timer: {}, possession: null },
+          lowerThird: { visible: false, title: '', subtitle: '' },
+          ticker: {
+            visible: true,
+            items: [
+              { id: '1', primary: 'GOAL!', secondary: 'Rashford (45\')' },
+              { id: '2', primary: 'Possession', secondary: 'MUN 52% - 48% LIV' }
+            ],
+            scrollSpeed: 80
+          },
+          breakingBanner: { visible: false, text: '' },
+        }
+      }
+      window.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(testState) }))
+    }
+    
+    function testBreaking() {
+      const testState = {
+        type: 'state',
+        data: {
+          scoreBug: { visible: false, homeTeam: {}, awayTeam: {}, timer: {}, possession: null },
+          lowerThird: { visible: false, title: '', subtitle: '' },
+          ticker: { visible: false, items: [] },
+          breakingBanner: {
+            visible: true,
+            text: 'MATCH DELAYED DUE TO VAR REVIEW'
+          },
+        }
+      }
+      window.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(testState) }))
+    }
+    
+    function hideAll() {
+      const testState = {
+        type: 'state',
+        data: {
+          scoreBug: { visible: false, homeTeam: {}, awayTeam: {}, timer: {}, possession: null },
+          lowerThird: { visible: false, title: '', subtitle: '' },
+          ticker: { visible: false, items: [] },
+          breakingBanner: { visible: false, text: '' },
+        }
+      }
+      window.dispatchEvent(new MessageEvent('message', { data: JSON.stringify(testState) }))
+    }
+  </script>
+</body>
+</html>
+
