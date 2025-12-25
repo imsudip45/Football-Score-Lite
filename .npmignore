@@ -1,0 +1,52 @@
+# Test files
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+**/test/**
+**/tests/**
+**/__tests__/**
+
+# Development files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build artifacts
+.next/
+out/
+electron/dist/
+release/
+dist/
+build/
+
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env*.local
+
+# Documentation drafts
+*.draft.md
+*backup*/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Misc
+*.log
+*.tsbuildinfo
+coverage/
+.DS_Store
+Thumbs.db
+
