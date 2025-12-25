@@ -878,6 +878,10 @@ export function LiveControl() {
     )
   }
 
+  // Resolve renderer URL for network access
+  const rendererHost = typeof window === 'undefined' ? 'localhost' : window.location.hostname || 'localhost'
+  const rendererUrl = `http://${rendererHost}:3000/renderer`
+
   return (
     <div className="mt-0 space-y-2">
       {/* Page header */}
@@ -914,8 +918,8 @@ export function LiveControl() {
             size="sm" 
             className="gap-1 bg-transparent"
             onClick={() => {
-              navigator.clipboard.writeText('http://localhost:3000/renderer')
-              toast.success('Renderer URL copied to clipboard')
+              navigator.clipboard.writeText(rendererUrl)
+              toast.success(`Copied: ${rendererUrl}`)
             }}
           >
             <ExternalLink className="h-4 w-4" />
@@ -928,7 +932,7 @@ export function LiveControl() {
             size="sm" 
             className="gap-1 bg-transparent"
             onClick={() => {
-              window.open('http://localhost:3000/renderer', 'renderer', 'width=1920,height=1080')
+              window.open(rendererUrl, 'renderer', 'width=1920,height=1080')
             }}
           >
             <Monitor className="h-4 w-4" />
