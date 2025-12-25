@@ -360,7 +360,7 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
               className="text-center leading-tight italic text-white"
               style={{ 
                 fontFamily: "'Snasm', sans-serif",
-                fontSize: (leagueShortName || leagueName).length <= 3 ? '2.5rem' : (leagueShortName || leagueName).length <= 5 ? '1.75rem' : (leagueShortName || leagueName).length <= 8 ? '1.25rem' : '0.875rem',
+                fontSize: (leagueShortName || leagueName).length <= 3 ? '2.25rem' : (leagueShortName || leagueName).length <= 5 ? '1.5rem' : (leagueShortName || leagueName).length <= 8 ? '1rem' : '0.75rem',
                 wordBreak: 'break-word',
                 maxWidth: '100%',
                 letterSpacing: '-0.02em',
