@@ -219,21 +219,19 @@ export default function MatchStatsLowerThird({
         .anim-lt-top-in { animation: ltTopIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards 0s; transform: translateY(100%); opacity: 0; }
         .anim-lt-top-out { animation: ltTopOut 0.25s cubic-bezier(0.7, 0, 0.84, 0) forwards 0s; }
         
-        /* Timer box animation - stays hidden while moving up, only reveals at the top */
+        /* Timer box animation - fully hidden while moving up, only revealed near final position */
         @keyframes timerBoxIn {
           0%   { transform: translateY(80px); opacity: 0; }
-          70%  { transform: translateY(20px); opacity: 0; } /* move behind, still invisible */
+          85%  { transform: translateY(8px);  opacity: 0; } /* move behind, invisible */
           100% { transform: translateY(0);    opacity: 1; }
         }
         @keyframes timerBoxOut {
           0%   { transform: translateY(0);    opacity: 1; }
-          30%  { transform: translateY(0);    opacity: 0; } /* fade before moving down */
+          20%  { transform: translateY(0);    opacity: 1; }
           100% { transform: translateY(80px); opacity: 0; }
         }
         .anim-timer-box-in { 
-          animation: timerBoxIn 0.5s cubic-bezier(0.33, 1, 0.68, 1) forwards 0.05s; 
-          transform: translateY(80px); 
-          opacity: 0;
+          animation: timerBoxIn 0.55s cubic-bezier(0.33, 1, 0.68, 1) forwards 0.05s; 
           will-change: transform, opacity;
         }
         .anim-timer-box-out { 
@@ -429,7 +427,7 @@ export default function MatchStatsLowerThird({
             <div className="relative flex h-full gap-1 overflow-visible">
               {/* Timer Box - centered above the two score boxes, slides up from behind */}
               {timer && (
-                <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-49 h-10 overflow-visible">
+                <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-49 h-10 overflow-hidden">
                   <div 
                     className={`h-10 flex items-center justify-center ${
                       phase === 'logos-split' || phase === 'content' ? 'anim-timer-box-in' : 
@@ -439,7 +437,7 @@ export default function MatchStatsLowerThird({
                     }`}
                     style={{
                       ...(Object.keys(getStyle('timer-box')).length > 0 ? getStyle('timer-box') : { backgroundColor: '#292a2bff' }),
-                      zIndex: 5,
+                      zIndex: 2,
                     }}
                   >
                     <span 
