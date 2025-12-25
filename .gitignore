@@ -21,13 +21,16 @@ out/
 
 # Electron
 electron/dist/
+electron/out/
 release/
 dist/
 
 # Build outputs
 build/
+out/
 *.log
 *.tsbuildinfo
+next-env.d.ts
 
 # Environment
 .env

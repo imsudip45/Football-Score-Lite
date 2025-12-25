@@ -8,13 +8,8 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
-    "dev:full": "concurrently \"pnpm dev\" \"node server.js\"",
-    "server": "node server.js",
     "lint": "eslint .",
     "start": "next start",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "migrate:events-seconds": "tsx scripts/migrate-events-seconds.ts",
     "electron:build": "tsc -p electron/tsconfig.json",
     "electron": "electron electron/dist/main.js",
     "electron:start": "pnpm electron:build && electron electron/dist/main.js",
@@ -86,26 +81,17 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.9",
-    "@testing-library/dom": "^10.4.1",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.1",
-    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/ws": "^8.5.10",
-    "@vitejs/plugin-react": "^5.1.2",
     "concurrently": "^9.0.1",
     "electron": "31.2.0",
     "electron-builder": "^25.1.8",
-    "fast-check": "^4.4.0",
-    "jsdom": "^27.3.0",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
-    "tsx": "^4.19.2",
     "tw-animate-css": "1.3.3",
     "typescript": "^5",
-    "vitest": "^4.0.16",
     "wait-on": "^7.0.1"
   },
   "build": {
@@ -119,7 +105,6 @@
     "files": [
       "electron/dist/**/*",
       "out/**/*",
-      "server.js",
       "public/**/*"
     ],
     "extraResources": [
