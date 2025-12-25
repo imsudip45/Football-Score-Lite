@@ -219,16 +219,16 @@ export default function MatchStatsLowerThird({
         .anim-lt-top-in { animation: ltTopIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards 0s; transform: translateY(100%); opacity: 0; }
         .anim-lt-top-out { animation: ltTopOut 0.25s cubic-bezier(0.7, 0, 0.84, 0) forwards 0s; }
         
-        /* Timer box animation - slides up from behind the main bar (starts hidden at bar level, slides up to final position) */
+        /* Timer box animation - slides up from completely hidden behind score boxes */
         @keyframes timerBoxIn {
-          from { transform: translateY(40px); opacity: 1; }
-          to { transform: translateY(0); opacity: 1; }
+          from { transform: translateY(80px); }
+          to { transform: translateY(0); }
         }
         @keyframes timerBoxOut {
-          from { transform: translateY(0); opacity: 1; }
-          to { transform: translateY(40px); opacity: 1; }
+          from { transform: translateY(0); }
+          to { transform: translateY(80px); }
         }
-        .anim-timer-box-in { animation: timerBoxIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards 0s; transform: translateY(40px); }
+        .anim-timer-box-in { animation: timerBoxIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards 0.1s; transform: translateY(80px); }
         .anim-timer-box-out { animation: timerBoxOut 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards; }
         
         /* Dynamic pattern animation keyframes */
@@ -416,8 +416,8 @@ export default function MatchStatsLowerThird({
             </div>
 
             {/* Score Block with Timer Box above */}
-            <div className="relative flex h-full gap-1 overflow-visible">
-              {/* Timer Box - positioned above score boxes, slides out from behind main bar */}
+            <div className="relative flex h-full gap-1 overflow-hidden">
+              {/* Timer Box - positioned above score boxes, slides up from behind */}
               {timer && (
                 <div 
                   className={`absolute -top-10 left-0 right-0 h-10 flex items-center justify-center ${
@@ -428,7 +428,7 @@ export default function MatchStatsLowerThird({
                   }`}
                   style={{
                     ...(Object.keys(getStyle('timer-box')).length > 0 ? getStyle('timer-box') : { backgroundColor: '#292a2bff' }),
-                    zIndex: -1,
+                    zIndex: 0,
                   }}
                 >
                   <span 
@@ -451,7 +451,7 @@ export default function MatchStatsLowerThird({
                 </div>
               )}
               <div 
-                className="w-24 flex items-center justify-center"
+                className="w-24 flex items-center justify-center relative z-10"
                 style={Object.keys(getStyle('score-box')).length > 0 ? getStyle('score-box') : { backgroundColor: '#E6E7E8' }}
               >
                 <span 
@@ -460,7 +460,7 @@ export default function MatchStatsLowerThird({
                 >{homeTeam.score}</span>
               </div>
               <div 
-                className="w-24 flex items-center justify-center"
+                className="w-24 flex items-center justify-center relative z-10"
                 style={Object.keys(getStyle('score-box')).length > 0 ? getStyle('score-box') : { backgroundColor: '#E6E7E8' }}
               >
                 <span 
