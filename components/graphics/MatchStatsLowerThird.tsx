@@ -416,10 +416,10 @@ export default function MatchStatsLowerThird({
             </div>
 
             {/* Score Block with Timer Box above */}
-            <div className="relative flex h-full gap-1 overflow-hidden">
+            <div className="relative flex h-full gap-1 overflow-visible">
               {/* Timer Box - centered above the two score boxes, slides up from behind */}
               {timer && (
-                <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-48 h-10 overflow-hidden">
+                <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-48 h-10 overflow-visible">
                   <div 
                     className={`h-10 flex items-center justify-center ${
                       phase === 'logos-split' || phase === 'content' ? 'anim-timer-box-in' : 
@@ -429,7 +429,7 @@ export default function MatchStatsLowerThird({
                     }`}
                     style={{
                       ...(Object.keys(getStyle('timer-box')).length > 0 ? getStyle('timer-box') : { backgroundColor: '#292a2bff' }),
-                      zIndex: 0,
+                      zIndex: 5,
                     }}
                   >
                     <span 
