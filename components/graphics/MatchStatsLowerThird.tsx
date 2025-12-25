@@ -219,17 +219,25 @@ export default function MatchStatsLowerThird({
         .anim-lt-top-in { animation: ltTopIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards 0s; transform: translateY(100%); opacity: 0; }
         .anim-lt-top-out { animation: ltTopOut 0.25s cubic-bezier(0.7, 0, 0.84, 0) forwards 0s; }
         
-        /* Timer box animation - slides up from completely hidden behind score boxes */
+        /* Timer box animation - slides up smoothly from behind score boxes */
         @keyframes timerBoxIn {
-          from { transform: translateY(80px); }
-          to { transform: translateY(0); }
+          from { transform: translateY(80px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         }
         @keyframes timerBoxOut {
-          from { transform: translateY(0); }
-          to { transform: translateY(80px); }
+          from { transform: translateY(0); opacity: 1; }
+          to { transform: translateY(80px); opacity: 0; }
         }
-        .anim-timer-box-in { animation: timerBoxIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards 0.1s; transform: translateY(80px); }
-        .anim-timer-box-out { animation: timerBoxOut 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards; }
+        .anim-timer-box-in { 
+          animation: timerBoxIn 0.45s cubic-bezier(0.33, 1, 0.68, 1) forwards 0.05s; 
+          transform: translateY(80px); 
+          opacity: 0;
+          will-change: transform, opacity;
+        }
+        .anim-timer-box-out { 
+          animation: timerBoxOut 0.35s cubic-bezier(0.7, 0, 0.84, 0) forwards; 
+          will-change: transform, opacity;
+        }
         
         /* Dynamic pattern animation keyframes */
         ${getPatternAnimationCSS()}
@@ -419,7 +427,7 @@ export default function MatchStatsLowerThird({
             <div className="relative flex h-full gap-1 overflow-visible">
               {/* Timer Box - centered above the two score boxes, slides up from behind */}
               {timer && (
-                <div className="absolute -top-8 left-1/2 -translate-x-1/2 w-48 h-10 overflow-visible">
+                <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-49 h-10 overflow-visible">
                   <div 
                     className={`h-10 flex items-center justify-center ${
                       phase === 'logos-split' || phase === 'content' ? 'anim-timer-box-in' : 
