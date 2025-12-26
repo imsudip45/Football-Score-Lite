@@ -390,7 +390,7 @@ export default function MatchStatsLowerThird({
         )}
 
         {/* Main Bar */}
-        <div className="flex w-full h-20 z-10">
+        <div className="flex w-full h-20 z-10 overflow-visible">
           {/* Left Logo Box - always uses team color directly, full height */}
           <div
             className={`w-28 flex items-center justify-center relative shadow-[inset_-4px_0_10px_rgba(0,0,0,0.1)] z-20 overflow-hidden ${
@@ -407,7 +407,7 @@ export default function MatchStatsLowerThird({
 
           {/* Center Section - Team Names and Scores */}
           <div 
-            className={`flex flex-1 h-full relative z-20 ${
+            className={`flex flex-1 h-full relative z-20 overflow-visible ${
               phase === 'logos-split' ? 'anim-lt-center-in' : 
               phase === 'content' || phase === 'scorers-out' || phase === 'timer-out' ? '' : 
               phase === 'logos-merge' ? 'anim-lt-center-out' : 
@@ -431,7 +431,7 @@ export default function MatchStatsLowerThird({
             {/* Score Block with Timer Box above */}
             <div className="relative flex h-full gap-1 overflow-visible">
               {/* Timer Box - centered above the two score boxes, Framer Motion animation */}
-              <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-49 overflow-visible pointer-events-none" style={{ height: '80px' }}>
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-49 overflow-visible pointer-events-none" style={{ height: '160px' }}>
                 <AnimatePresence initial={false} mode="wait">
                   {timer && (phase === 'logos-split' || phase === 'content') && (
                     <motion.div
