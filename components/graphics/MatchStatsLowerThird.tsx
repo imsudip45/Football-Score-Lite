@@ -145,6 +145,7 @@ export default function MatchStatsLowerThird({
   const getColor = (id: string) => getTextColor(customization, id);
   const getScoreBugStyle = (id: string) => getPatternStyleWithAnimation(scoreBugCustomization, id, teamColors);
   const getScoreBugColor = (id: string) => getTextColor(scoreBugCustomization, id);
+  const isLogosActive = ['logos-split', 'content', 'scorers-out', 'timer-out', 'logos-merge'].includes(phase);
 
   // Immediately set the starting phase when animate changes (before paint)
   useLayoutEffect(() => {
@@ -434,12 +435,8 @@ export default function MatchStatsLowerThird({
         )}
       </AnimatePresence>
 
-      {/* Main content - visible during logos-split, content, timer-out, and logos-merge phases */}
-      <div className={`w-full ${
-        phase === 'league' || phase === 'league-out' || phase === 'logos-center' || 
-        phase === 'logos-center-out' || phase === 'league-in-out' || phase === 'league-exit'
-          ? 'opacity-0' : 'opacity-100'
-      }`}>
+      {/* Main content */}
+      <div className="w-full opacity-100">
         {/* Home Scorers - Attached to top of L3 (from logo box to team name area) */}
         <AnimatePresence initial={false} mode="wait">
           {(showScorers === 'home' || showScorers === 'both') && homeTeam.scorers && homeTeam.scorers.length > 0 && (phase === 'logos-split' || phase === 'content' || phase === 'scorers-out') && (
@@ -497,11 +494,8 @@ export default function MatchStatsLowerThird({
             className="w-28 flex items-center justify-center relative shadow-[inset_-4px_0_10px_rgba(0,0,0,0.1)] z-20 overflow-visible"
             style={{ backgroundColor: homeTeam.color }}
             variants={logoSplitLeftVariants}
-            initial="hidden"
-            animate={
-              phase === 'logos-merge' ? 'merge' :
-              (phase === 'logos-split' || phase === 'content' || phase === 'scorers-out' || phase === 'timer-out') ? 'split' : 'hidden'
-            }
+            initial={false}
+            animate={phase === 'logos-merge' ? 'merge' : (isLogosActive ? 'split' : 'hidden')}
           >
             {homeTeam.logo && (
               <img src={homeTeam.logo} alt="Home" className="h-16 w-16 object-contain drop-shadow-md relative z-10" />
@@ -509,13 +503,14 @@ export default function MatchStatsLowerThird({
           </motion.div>
 
           {/* Center Section - Team Names and Scores */}
-          <motion.div 
-            className="flex flex-1 h-full relative z-20 overflow-visible"
-            style={Object.keys(getStyle('center-bar')).length > 0 ? getStyle('center-bar') : { backgroundColor: '#ffffff' }}
-            variants={centerBarVariants}
-            initial="hidden"
-            animate={(phase === 'logos-split' || phase === 'content' || phase === 'scorers-out' || phase === 'timer-out' || phase === 'logos-merge') ? 'visible' : 'hidden'}
-          >
+          <div className="flex flex-1 h-full relative z-10 overflow-hidden">
+            <motion.div 
+              className="flex h-full w-full relative z-20 overflow-visible"
+              style={Object.keys(getStyle('center-bar')).length > 0 ? getStyle('center-bar') : { backgroundColor: '#ffffff' }}
+              variants={centerBarVariants}
+              initial="hidden"
+              animate={(phase === 'logos-split' || phase === 'content') ? 'visible' : 'hidden'}
+            >
             {/* Home Name */}
             <div className="flex-1 flex items-center justify-center">
               <span 
@@ -557,18 +552,16 @@ export default function MatchStatsLowerThird({
                 {awayTeam.name}
               </span>
             </div>
-          </motion.div>
+            </motion.div>
+          </div>
 
           {/* Right Logo Box - always uses team color directly, full height */}
           <motion.div
             className="w-28 flex items-center justify-center relative shadow-[inset_4px_0_10px_rgba(0,0,0,0.1)] z-20 overflow-visible"
             style={{ backgroundColor: awayTeam.color }}
             variants={logoSplitRightVariants}
-            initial="hidden"
-            animate={
-              phase === 'logos-merge' ? 'merge' :
-              (phase === 'logos-split' || phase === 'content' || phase === 'scorers-out' || phase === 'timer-out') ? 'split' : 'hidden'
-            }
+            initial={false}
+            animate={phase === 'logos-merge' ? 'merge' : (isLogosActive ? 'split' : 'hidden')}
           >
             {awayTeam.logo && (
               <img src={awayTeam.logo} alt="Away" className="h-16 w-16 object-contain drop-shadow-md relative z-10" />
