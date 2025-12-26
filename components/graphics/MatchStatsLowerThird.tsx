@@ -428,7 +428,7 @@ export default function MatchStatsLowerThird({
             <div className="relative flex h-full gap-1 overflow-visible">
               {/* Timer Box - centered above the two score boxes, clean slide up/down */}
               {timer && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-49 h-20 overflow-visible pointer-events-none">
+                <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-49 overflow-visible pointer-events-none" style={{ height: '80px' }}>
                   <div 
                     className={`h-10 flex items-center justify-center timer-box ${
                       phase === 'logos-split' ? 'anim-timer-box-in' :
