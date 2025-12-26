@@ -219,25 +219,21 @@ export default function MatchStatsLowerThird({
         .anim-lt-top-in { animation: ltTopIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards 0s; transform: translateY(100%); opacity: 0; }
         .anim-lt-top-out { animation: ltTopOut 0.25s cubic-bezier(0.7, 0, 0.84, 0) forwards 0s; }
         
-        /* Timer box animation - slower, clearly visible slide */
+        /* Timer box animation - rebuilt clean slide up/down */
         @keyframes timerBoxIn {
-          0%   { transform: translateY(70px); opacity: 0.35; }
-          45%  { transform: translateY(35px); opacity: 0.65; }
-          100% { transform: translateY(0);    opacity: 1; }
+          from { transform: translateY(60px); opacity: 0; }
+          to   { transform: translateY(0);    opacity: 1; }
         }
         @keyframes timerBoxOut {
-          0%   { transform: translateY(0);    opacity: 1; }
-          55%  { transform: translateY(35px); opacity: 0.6; }
-          100% { transform: translateY(70px); opacity: 0; }
+          from { transform: translateY(0);    opacity: 1; }
+          to   { transform: translateY(60px); opacity: 0; }
         }
         .anim-timer-box-in { 
-          animation: timerBoxIn 1.25s cubic-bezier(0.25, 0.9, 0.3, 1.05) forwards; 
-          transform: translateY(70px);
-          opacity: 0.35;
+          animation: timerBoxIn 0.9s cubic-bezier(0.4, 0, 0.2, 1) forwards; 
           will-change: transform, opacity;
         }
         .anim-timer-box-out { 
-          animation: timerBoxOut 0.95s cubic-bezier(0.4, 0, 0.2, 1) forwards; 
+          animation: timerBoxOut 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards; 
           will-change: transform, opacity;
         }
         
@@ -427,17 +423,19 @@ export default function MatchStatsLowerThird({
 
             {/* Score Block with Timer Box above */}
             <div className="relative flex h-full gap-1 overflow-visible">
-              {/* Timer Box - centered above the two score boxes, slides up from behind */}
+              {/* Timer Box - centered above the two score boxes, clean slide up/down */}
               {timer && (
-                <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-49 h-10 overflow-hidden">
+                <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-48 h-10 overflow-hidden" style={{ pointerEvents: 'none' }}>
                   <div 
                     className={`h-10 flex items-center justify-center ${
                       (phase === 'logos-split' || phase === 'content') ? 'anim-timer-box-in' : 
                       (phase === 'timer-out') ? 'anim-timer-box-out' : 
-                      'opacity-0'
+                      ''
                     }`}
                     style={{
                       ...(Object.keys(getStyle('timer-box')).length > 0 ? getStyle('timer-box') : { backgroundColor: '#292a2bff' }),
+                      transform: 'translateY(60px)',
+                      opacity: 0,
                       zIndex: 2,
                     }}
                   >
@@ -446,10 +444,8 @@ export default function MatchStatsLowerThird({
                       style={{ color: getColor('timer-box') || '#ffffff' }}
                     >
                       {timer.isRunning ? (
-                        // Show running timer
                         `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`
                       ) : (
-                        // Show period text when paused/stopped
                         timer.period === 'ht' ? 'HALF TIME' :
                         timer.period === 'ft' ? 'FULL TIME' :
                         timer.period === 'pre' ? 'PRE MATCH' :
