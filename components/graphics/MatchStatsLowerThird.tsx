@@ -52,14 +52,14 @@ const logosCenterVariants = {
 // Logo split/merge variants
 const logoSplitLeftVariants = {
   hidden: { x: 484, opacity: 0 },
-  split: { x: 0, opacity: 1, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
-  merge: { x: 484, opacity: 1, transition: { duration: 0.9, ease: [0.4, 0, 0.2, 1] as [number, number, number, number] } },
+  split: { x: 0, opacity: 1, transition: { duration: 0.95, ease: [0.25, 0.8, 0.25, 1] as [number, number, number, number] } },
+  merge: { x: 484, opacity: 1, transition: { duration: 0.95, ease: [0.4, 0, 0.2, 1] as [number, number, number, number] } },
 };
 
 const logoSplitRightVariants = {
   hidden: { x: -484, opacity: 0 },
-  split: { x: 0, opacity: 1, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
-  merge: { x: -484, opacity: 1, transition: { duration: 0.9, ease: [0.4, 0, 0.2, 1] as [number, number, number, number] } },
+  split: { x: 0, opacity: 1, transition: { duration: 0.95, ease: [0.25, 0.8, 0.25, 1] as [number, number, number, number] } },
+  merge: { x: -484, opacity: 1, transition: { duration: 0.95, ease: [0.4, 0, 0.2, 1] as [number, number, number, number] } },
 };
 
 // Center bar visibility
