@@ -219,22 +219,28 @@ export default function MatchStatsLowerThird({
         .anim-lt-top-in { animation: ltTopIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards 0s; transform: translateY(100%); opacity: 0; }
         .anim-lt-top-out { animation: ltTopOut 0.25s cubic-bezier(0.7, 0, 0.84, 0) forwards 0s; }
         
-        /* Timer box animation - rebuilt clean slide up/down */
+        /* Timer box animation - smooth ease with intermediate steps */
         @keyframes timerBoxIn {
-          from { transform: translateY(60px); opacity: 0; }
-          to   { transform: translateY(0);    opacity: 1; }
+          0%   { transform: translateY(60px); opacity: 0; }
+          30%  { transform: translateY(40px); opacity: 0.3; }
+          60%  { transform: translateY(15px); opacity: 0.7; }
+          100% { transform: translateY(0);    opacity: 1; }
         }
         @keyframes timerBoxOut {
-          from { transform: translateY(0);    opacity: 1; }
-          to   { transform: translateY(60px); opacity: 0; }
+          0%   { transform: translateY(0);    opacity: 1; }
+          40%  { transform: translateY(15px); opacity: 0.7; }
+          70%  { transform: translateY(40px); opacity: 0.3; }
+          100% { transform: translateY(60px); opacity: 0; }
         }
         .anim-timer-box-in { 
-          animation: timerBoxIn 0.9s cubic-bezier(0.4, 0, 0.2, 1) forwards; 
+          animation: timerBoxIn 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; 
           will-change: transform, opacity;
+          backface-visibility: hidden;
         }
         .anim-timer-box-out { 
-          animation: timerBoxOut 0.7s cubic-bezier(0.4, 0, 0.2, 1) forwards; 
+          animation: timerBoxOut 0.8s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards; 
           will-change: transform, opacity;
+          backface-visibility: hidden;
         }
         
         /* Dynamic pattern animation keyframes */
