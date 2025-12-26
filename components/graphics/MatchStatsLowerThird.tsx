@@ -102,17 +102,13 @@ export default function MatchStatsLowerThird({
       };
     } else {
       // OUT animation sequence:
-      // scorers-out (scorers go down first) -> timer-out -> logos-merge -> logos-center-out -> league-in-out -> league-exit
+      // scorers-out (scorers + timer go down AND bar starts merging/clipping) -> logos-center-out -> league-in-out -> league-exit
       setPhase('scorers-out');
-      const timer0 = setTimeout(() => setPhase('timer-out'), 400); // After scorers go down
-      const timer1 = setTimeout(() => setPhase('logos-merge'), 700); // After timer box goes down (400 + 300)
-      const timer2 = setTimeout(() => setPhase('logos-center-out'), 1600); // 700 + 900
-      const timer3 = setTimeout(() => setPhase('league-in-out'), 2000); // After logos disappear
-      const timer4 = setTimeout(() => setPhase('league-exit'), 2600); // Give league badge 600ms visible time (faster exit)
+      const timer2 = setTimeout(() => setPhase('logos-center-out'), 900); // match logo merge/center clip out duration
+      const timer3 = setTimeout(() => setPhase('league-in-out'), 1300); // 900 + 400 (logos-center-out)
+      const timer4 = setTimeout(() => setPhase('league-exit'), 1900); // give league badge ~600ms then exit
       
       return () => {
-        clearTimeout(timer0);
-        clearTimeout(timer1);
         clearTimeout(timer2);
         clearTimeout(timer3);
         clearTimeout(timer4);
@@ -219,17 +215,26 @@ export default function MatchStatsLowerThird({
         .anim-lt-top-in { animation: ltTopIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards 0s; transform: translateY(100%); opacity: 0; }
         .anim-lt-top-out { animation: ltTopOut 0.25s cubic-bezier(0.7, 0, 0.84, 0) forwards 0s; }
         
-        /* Timer box animation - comes up from below immediately when content phase starts */
+        /* Timer box animation - comes up with scorers during logos-split */
         @keyframes timerBoxIn {
-          from { transform: translateY(100%); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
+          from { transform: translateY(100%); }
+          to   { transform: translateY(0); }
         }
         @keyframes timerBoxOut {
-          from { transform: translateY(0); opacity: 1; }
-          to { transform: translateY(100%); opacity: 0; }
+           from { transform: translateY(0); }
+           to   { transform: translateY(100%); }
+         }
+        /* Important: use fill-mode: both so the FIRST painted frame uses the 0% keyframe (prevents "flash") */
+        .anim-timer-box-in { 
+          transform: translateY(100%);
+          animation: timerBoxIn 0.30s cubic-bezier(0.22, 1, 0.36, 1) both; 
+          will-change: transform;
         }
-        .anim-timer-box-in { animation: timerBoxIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards 0s; transform: translateY(100%); opacity: 0; }
-        .anim-timer-box-out { animation: timerBoxOut 0.25s cubic-bezier(0.7, 0, 0.84, 0) forwards; }
+        .anim-timer-box-out { 
+          transform: translateY(0);
+          animation: timerBoxOut 0.25s cubic-bezier(0.7, 0, 0.84, 0) both; 
+          will-change: transform;
+        }
         
         /* Dynamic pattern animation keyframes */
         ${getPatternAnimationCSS()}
@@ -326,6 +331,43 @@ export default function MatchStatsLowerThird({
         </div>
       )}
 
+      {/* Timer overlay (kept OUTSIDE the center-bar clip-path to avoid IN clipping/popping) */}
+      {(timer && (phase === 'logos-split' || phase === 'content' || phase === 'scorers-out')) && (
+        <div
+          className="absolute left-1/2 -translate-x-1/2 -translate-y-10 w-[196px] h-10 overflow-hidden pointer-events-none"
+          style={{ zIndex: 15 }}
+        >
+          <div
+            className={`h-10 flex items-center justify-center ${
+              (phase === 'logos-split' || phase === 'content')
+                ? 'anim-timer-box-in'
+                : phase === 'scorers-out'
+                ? 'anim-timer-box-out'
+                : ''
+            }`}
+            style={{
+              ...(Object.keys(getStyle('timer-box')).length > 0 ? getStyle('timer-box') : { backgroundColor: '#292a2bff' }),
+            }}
+          >
+            <span
+              className="font-sans font-bold text-2xl tracking-wider"
+              style={{ color: getColor('timer-box') || '#ffffff' }}
+            >
+              {timer.isRunning ? (
+                `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`
+              ) : (
+                timer.period === 'ht' ? 'HALF TIME' :
+                timer.period === 'ft' ? 'FULL TIME' :
+                timer.period === 'pre' ? 'PRE MATCH' :
+                timer.period === 'et1' ? 'EXTRA TIME' :
+                timer.period === 'et2' ? 'EXTRA TIME' :
+                `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`
+              )}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Main content - visible during logos-split, content, timer-out, and logos-merge phases */}
       <div className={`w-full ${
         phase === 'league' || phase === 'league-out' || phase === 'logos-center' || 
@@ -382,8 +424,9 @@ export default function MatchStatsLowerThird({
           <div
             className={`w-28 flex items-center justify-center relative shadow-[inset_-4px_0_10px_rgba(0,0,0,0.1)] z-20 overflow-hidden ${
               phase === 'logos-split' ? 'anim-logo-split-left' : 
-              phase === 'content' || phase === 'scorers-out' || phase === 'timer-out' ? '' : 
-              phase === 'logos-merge' ? 'anim-logo-merge-left' : 'opacity-0'
+              phase === 'content' ? '' :
+              (phase === 'scorers-out' || phase === 'logos-merge') ? 'anim-logo-merge-left' :
+              'opacity-0'
             }`}
             style={{ backgroundColor: homeTeam.color }}
           >
@@ -396,8 +439,8 @@ export default function MatchStatsLowerThird({
           <div 
             className={`flex flex-1 h-full relative z-20 ${
               phase === 'logos-split' ? 'anim-lt-center-in' : 
-              phase === 'content' || phase === 'scorers-out' || phase === 'timer-out' ? '' : 
-              phase === 'logos-merge' ? 'anim-lt-center-out' : 
+              phase === 'content' ? '' :
+              (phase === 'scorers-out' || phase === 'logos-merge') ? 'anim-lt-center-out' :
               ''
             }`}
             style={{
@@ -417,35 +460,6 @@ export default function MatchStatsLowerThird({
 
             {/* Score Block with Timer Box above */}
             <div className="relative flex h-full gap-1">
-              {/* Timer Box - positioned above score boxes, z-index lower so it appears from behind */}
-              {timer && (
-                <div 
-                  className={`absolute -top-10 left-0 right-0 h-10 flex items-center justify-center overflow-hidden -z-10 ${
-                    phase === 'content' ? 'anim-timer-box-in' : 
-                    phase === 'timer-out' ? 'anim-timer-box-out' : 
-                    'opacity-0'
-                  }`}
-                  style={Object.keys(getStyle('timer-box')).length > 0 ? getStyle('timer-box') : { backgroundColor: '#292a2bff' }}
-                >
-                  <span 
-                    className="font-sans font-bold text-2xl tracking-wider"
-                    style={{ color: getColor('timer-box') || '#ffffff' }}
-                  >
-                    {timer.isRunning ? (
-                      // Show running timer
-                      `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`
-                    ) : (
-                      // Show period text when paused/stopped
-                      timer.period === 'ht' ? 'HALF TIME' :
-                      timer.period === 'ft' ? 'FULL TIME' :
-                      timer.period === 'pre' ? 'PRE MATCH' :
-                      timer.period === 'et1' ? 'EXTRA TIME' :
-                      timer.period === 'et2' ? 'EXTRA TIME' :
-                      `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`
-                    )}
-                  </span>
-                </div>
-              )}
               <div 
                 className="w-24 flex items-center justify-center"
                 style={Object.keys(getStyle('score-box')).length > 0 ? getStyle('score-box') : { backgroundColor: '#E6E7E8' }}
@@ -481,8 +495,9 @@ export default function MatchStatsLowerThird({
           <div
             className={`w-28 flex items-center justify-center relative shadow-[inset_4px_0_10px_rgba(0,0,0,0.1)] z-20 overflow-hidden ${
               phase === 'logos-split' ? 'anim-logo-split-right' : 
-              phase === 'content' || phase === 'scorers-out' || phase === 'timer-out' ? '' : 
-              phase === 'logos-merge' ? 'anim-logo-merge-right' : 'opacity-0'
+              phase === 'content' ? '' :
+              (phase === 'scorers-out' || phase === 'logos-merge') ? 'anim-logo-merge-right' :
+              'opacity-0'
             }`}
             style={{ backgroundColor: awayTeam.color }}
           >

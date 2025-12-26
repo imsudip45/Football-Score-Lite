@@ -93,6 +93,10 @@ export function EventModal({ open, onOpenChange, eventType, capturedMatchTime, p
     // Update score and show graphics for goal events
     // Note: Score is already updated via spinner, so we only update status and show graphics
     if (eventType === "goal" || eventType === "penalty-goal") {
+      if (!player) {
+        toast.error("Select a player for the goal")
+        return
+      }
       // Only update status (score already incremented via spinner)
       updateMatch({ status: 'live' })
       
@@ -103,13 +107,18 @@ export function EventModal({ open, onOpenChange, eventType, capturedMatchTime, p
         goalTime: formatEventTime(event, settings.timeFormat),
         isPenalty: eventType === "penalty-goal",
         isOwnGoal: false,
-        teamColor: selectedTeam?.primaryColor || '#c8102e'
+        teamColor: selectedTeam?.primaryColor || '#c8102e',
+        team,
       })
       toggleGoal(true)
       setTimeout(() => toggleGoal(false), 5000) // Auto-hide after 5s
       
       toast.success(`Goal! ${player?.name || 'Unknown'} - ${selectedTeam?.shortName}`)
     } else if (eventType === "own-goal") {
+      if (!player) {
+        toast.error("Select a player for the own goal")
+        return
+      }
       // Own goal adds to the opposing team - this still needs score update
       const scoreKey = team === "home" ? "awayScore" : "homeScore"
       const currentScore = currentMatch?.[scoreKey] || 0
@@ -122,7 +131,8 @@ export function EventModal({ open, onOpenChange, eventType, capturedMatchTime, p
         goalTime: formatEventTime(event, settings.timeFormat),
         isPenalty: false,
         isOwnGoal: true,
-        teamColor: selectedTeam?.primaryColor || '#c8102e'
+        teamColor: selectedTeam?.primaryColor || '#c8102e',
+        team,
       })
       toggleGoal(true)
       setTimeout(() => toggleGoal(false), 5000)
@@ -132,6 +142,10 @@ export function EventModal({ open, onOpenChange, eventType, capturedMatchTime, p
       // Penalty miss - no score change, just record the event
       toast.info(`Penalty Missed - ${player?.name || 'Unknown'}`)
     } else if (eventType === "yellow") {
+      if (!player) {
+        toast.error("Select a player for the card")
+        return
+      }
       // Auto-increment fouls when card is given
       const foulsKey = team === "home" ? "homeFouls" : "awayFouls"
       const currentFouls = currentMatch?.[foulsKey] || 0
@@ -143,13 +157,18 @@ export function EventModal({ open, onOpenChange, eventType, capturedMatchTime, p
         playerNumber: String(player?.number || ''),
         cardTime: formatEventTime(event, settings.timeFormat),
         cardType: 'yellow',
-        teamColor: selectedTeam?.primaryColor || '#c8102e'
+        teamColor: selectedTeam?.primaryColor || '#c8102e',
+        team,
       })
       toggleCard(true)
       setTimeout(() => toggleCard(false), 4000)
       
       toast.success(`Yellow Card - ${player?.name || 'Unknown'}`)
     } else if (eventType === "red" || eventType === "second-yellow") {
+      if (!player) {
+        toast.error("Select a player for the card")
+        return
+      }
       // Auto-increment fouls when card is given
       const foulsKey = team === "home" ? "homeFouls" : "awayFouls"
       const currentFouls = currentMatch?.[foulsKey] || 0
@@ -161,7 +180,8 @@ export function EventModal({ open, onOpenChange, eventType, capturedMatchTime, p
         playerNumber: String(player?.number || ''),
         cardTime: formatEventTime(event, settings.timeFormat),
         cardType: 'red',
-        teamColor: selectedTeam?.primaryColor || '#c8102e'
+        teamColor: selectedTeam?.primaryColor || '#c8102e',
+        team,
       })
       toggleCard(true)
       setTimeout(() => toggleCard(false), 4000)
@@ -216,7 +236,8 @@ export function EventModal({ open, onOpenChange, eventType, capturedMatchTime, p
               numberOut: String(playerOff?.number || ''),
               playerIn: playerOn?.name || '',
               numberIn: String(playerOn?.number || ''),
-              teamColor: selectedTeam?.primaryColor || '#c8102e'
+              teamColor: selectedTeam?.primaryColor || '#c8102e',
+              team,
             })
             toggleSubstitution(true)
             setTimeout(() => toggleSubstitution(false), 5000)

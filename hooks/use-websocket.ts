@@ -444,19 +444,24 @@ export function useWebSocket() {
       },
       matchOfficials: {
         visible: matchOfficialsVisible,
-        officials: (currentMatch?.officials || []).map(o => {
-          // Map internal role codes to display names
+        // Always send 4 rows (Ref/AR1/AR2/4th). If a role isn't assigned yet, show TBD.
+        officials: (() => {
           const roleDisplayMap: Record<string, string> = {
-            'referee': 'REFEREE',
-            'ar1': 'ASSISTANT REFEREE 1',
-            'ar2': 'ASSISTANT REFEREE 2',
-            'fourth': '4TH OFFICIAL',
-          };
-          return {
-            role: roleDisplayMap[o.role] || o.role.toUpperCase().replace(/-/g, ' '),
-            name: o.name,
-          };
-        }),
+            referee: 'REFEREE',
+            ar1: 'ASSISTANT REFEREE 1',
+            ar2: 'ASSISTANT REFEREE 2',
+            fourth: '4TH OFFICIAL',
+          }
+
+          const assigned = currentMatch?.officials || []
+          const getByRole = (role: string) => assigned.find((o) => o.role === role)
+
+          const orderedRoles = ['referee', 'ar1', 'ar2', 'fourth'] as const
+          return orderedRoles.map((role) => ({
+            role: roleDisplayMap[role],
+            name: getByRole(role)?.name || 'TBD',
+          }))
+        })(),
         // Use same logic as scorebug for league name
         leagueName: currentMatch?.competitionShortName || 
           (currentMatch?.competition ? 

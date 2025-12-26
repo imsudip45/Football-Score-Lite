@@ -15,8 +15,8 @@ const NSL_COLORS = {
 
 interface LiveScoreBugProps {
   animate?: 'in' | 'out';
-  homeTeam?: { name?: string; shortName?: string; score?: number; logo?: string; color?: string; secondaryColor?: string };
-  awayTeam?: { name?: string; shortName?: string; score?: number; logo?: string; color?: string; secondaryColor?: string };
+  homeTeam?: { name?: string; shortName?: string; score?: number; logo?: string; color?: string; secondaryColor?: string; yellowCards?: number; redCards?: number };
+  awayTeam?: { name?: string; shortName?: string; score?: number; logo?: string; color?: string; secondaryColor?: string; yellowCards?: number; redCards?: number };
   timer?: { minutes?: number; seconds?: number; extra?: number; period?: string };
   penalties?: { home?: number; away?: number };
   leagueName?: string;
@@ -44,7 +44,9 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
     score: homeTeam.score ?? 0,
     logo: homeTeam.logo || '',
     color1: homeTeam.color || NSL_COLORS.darkRed,
-    color2: homeTeam.secondaryColor || '#004D98'
+    color2: homeTeam.secondaryColor || '#004D98',
+    yellowCards: homeTeam.yellowCards ?? 0,
+    redCards: homeTeam.redCards ?? 0,
   };
   
   const away = {
@@ -52,7 +54,37 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
     score: awayTeam.score ?? 0,
     logo: awayTeam.logo || '',
     color1: awayTeam.color || 'black',
-    color2: awayTeam.secondaryColor || 'white'
+    color2: awayTeam.secondaryColor || 'white',
+    yellowCards: awayTeam.yellowCards ?? 0,
+    redCards: awayTeam.redCards ?? 0,
+  };
+
+  const renderCards = (team: 'home' | 'away') => {
+    const yellow = team === 'home' ? home.yellowCards : away.yellowCards;
+    const red = team === 'home' ? home.redCards : away.redCards;
+    const redCount = Math.max(0, red ?? 0);
+
+    // In the scorebug team short-name boxes, only show RED cards (no yellow indicators).
+    if (redCount === 0) return null;
+
+    // Keep it clean + compact; show up to 6 red cards (extra are just not rendered visually).
+    const maxCards = 6;
+    const cards: Array<'yellow' | 'red'> = Array(Math.min(redCount, maxCards)).fill('red');
+
+    const alignClass = team === 'home' ? 'left-2 justify-start' : 'right-2 justify-end';
+
+    // "Attached" to the top edge: place the row just outside the box, with its bottom touching the top border.
+    return (
+      <div className={`absolute top-0 -translate-y-full ${alignClass} flex items-center gap-1 pointer-events-none`}>
+        {cards.map((c, idx) => (
+          <div
+            key={`${team}-card-${c}-${idx}`}
+            className="w-2.5 h-4 rounded-[2px] shadow-[0_1px_0_rgba(0,0,0,0.35)]"
+            style={{ backgroundColor: c === 'yellow' ? '#FFCC00' : NSL_COLORS.red }}
+          />
+        ))}
+      </div>
+    );
   };
   
   const teamColors = {
@@ -246,10 +278,12 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
         {/* Content wrapper - clips content at NSL's right edge during animation, then reveals all */}
         <div 
           className={`absolute left-0 top-0 h-full z-10 ${animate === 'in' ? 'anim-wrapper-in' : 'anim-wrapper-out'}`}
-          style={{ width: '720px', overflow: 'visible' }}
+          // NOTE: card indicators sit slightly above the name boxes; since this wrapper uses clip-path,
+          // we must extend the wrapper upward so those indicators don't get clipped.
+          style={{ width: '720px', overflow: 'visible', top: -20, height: 'calc(100% + 20px)', paddingTop: 20 }}
         >
           {/* Content - slides out from behind NSL using transform */}
-          <div className={`flex h-full ${animate === 'in' ? 'anim-content-in' : 'anim-content-out'}`} style={{ paddingLeft: '96px' }}>
+          <div className={`flex h-14 ${animate === 'in' ? 'anim-content-in' : 'anim-content-out'}`} style={{ paddingLeft: '96px' }}>
             {/* 2. Home Logo Box - always uses team color directly */}
             <div className="w-16 h-full flex items-center justify-center shrink-0" style={{ backgroundColor: home.color1 }}>
               {home.logo ? (
@@ -263,7 +297,8 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
 
             {/* 3. Home Team Name */}
             <div className="w-32 h-full flex flex-col shrink-0" style={getStyle('home-name-box')}>
-              <div className="flex-1 flex items-center justify-center px-3">
+              <div className="flex-1 flex items-center justify-center px-3 relative">
+                {renderCards('home')}
                 <span className="font-black text-3xl tracking-tighter" style={{ color: getColor('home-name-box') || '#000000' }}>{home.shortName}</span>
               </div>
               <div className="h-1.5 flex w-full">
@@ -290,7 +325,8 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
 
             {/* 6. Away Team Name */}
             <div className="w-32 h-full flex flex-col shrink-0" style={getStyle('away-name-box')}>
-              <div className="flex-1 flex items-center justify-center px-3">
+              <div className="flex-1 flex items-center justify-center px-3 relative">
+                {renderCards('away')}
                 <span className="font-black text-3xl tracking-tighter" style={{ color: getColor('away-name-box') || '#000000' }}>{away.shortName}</span>
               </div>
               <div className="h-1.5 flex w-full">

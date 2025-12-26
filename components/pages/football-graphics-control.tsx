@@ -103,7 +103,8 @@ export function FootballGraphicsControl() {
   const [selectedTeam, setSelectedTeam] = useState<'home' | 'away'>('home')
   const [subTeam, setSubTeam] = useState<'home' | 'away'>('home')
   const [goalTeam, setGoalTeam] = useState<'home' | 'away'>('home')
-  const [cardTeam, setCardTeam] = useState<'home' | 'away'>('home')
+  // Use store-backed team selection so the WS payload always matches the UI selection
+  const cardTeam = (cardData?.team || 'home') as 'home' | 'away'
   const [nameplateTeam, setNameplateTeam] = useState<'home' | 'away'>('home')
 
   // Sync coach data from database on mount
@@ -452,7 +453,10 @@ export function FootballGraphicsControl() {
   const showCard = () => {
     if (!cardData?.playerName) return toast.error("Enter player name")
     hideEventGraphics()
-    setCardData({ ...cardData, team: cardTeam })
+    // Read team at click-time from the store (Zustand updates are synchronous),
+    // so clicking "Away" then immediately "Show" can't accidentally send stale "home".
+    const teamNow = (useAppStore.getState().cardData.team || 'home') as 'home' | 'away'
+    setCardData({ team: teamNow })
     setTimeout(() => {
       toggleCard(true)
       setLastPushedGraphic((cardData?.cardType || 'yellow') === "red" ? "Red Card" : "Yellow Card")
@@ -933,11 +937,11 @@ export function FootballGraphicsControl() {
               {currentMatch && (
                 <>
                   <div className="flex gap-1 mb-2">
-                    <Button size="sm" variant={cardTeam === 'home' ? 'default' : 'outline'} className="h-6 flex-1 text-[10px] gap-1" onClick={() => setCardTeam('home')}>
+                    <Button size="sm" variant={cardTeam === 'home' ? 'default' : 'outline'} className="h-6 flex-1 text-[10px] gap-1" onClick={() => setCardData({ team: 'home' })}>
                       <div className="h-2 w-2 rounded-full" style={{ backgroundColor: currentMatch.homeTeam.primaryColor }} />
                       {currentMatch.homeTeam.shortName}
                     </Button>
-                    <Button size="sm" variant={cardTeam === 'away' ? 'default' : 'outline'} className="h-6 flex-1 text-[10px] gap-1" onClick={() => setCardTeam('away')}>
+                    <Button size="sm" variant={cardTeam === 'away' ? 'default' : 'outline'} className="h-6 flex-1 text-[10px] gap-1" onClick={() => setCardData({ team: 'away' })}>
                       <div className="h-2 w-2 rounded-full" style={{ backgroundColor: currentMatch.awayTeam.primaryColor }} />
                       {currentMatch.awayTeam.shortName}
                     </Button>

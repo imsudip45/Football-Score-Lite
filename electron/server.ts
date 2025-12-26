@@ -79,6 +79,10 @@ export interface GraphicsState {
     teamLogo?: string
     isOwnGoal: boolean
     isPenalty: boolean
+    team?: 'home' | 'away'
+    tournamentColor?: string
+    homeColors?: { primary: string; secondary: string }
+    awayColors?: { primary: string; secondary: string }
   }
   card: {
     visible: boolean
@@ -88,6 +92,9 @@ export interface GraphicsState {
     cardTime: string
     teamColor: string
     teamLogo?: string
+    team?: 'home' | 'away'
+    homeColors?: { primary: string; secondary: string }
+    awayColors?: { primary: string; secondary: string }
   }
   substitution: {
     visible: boolean
@@ -97,6 +104,9 @@ export interface GraphicsState {
     numberOut: string
     teamColor: string
     teamLogo?: string
+    team?: 'home' | 'away'
+    homeColors?: { primary: string; secondary: string }
+    awayColors?: { primary: string; secondary: string }
   }
   vsGraphic: {
     visible: boolean
@@ -114,6 +124,9 @@ export interface GraphicsState {
     number: string
     teamColor: string
     teamLogo?: string
+    team?: 'home' | 'away' | 'neutral'
+    homeColors?: { primary: string; secondary: string }
+    awayColors?: { primary: string; secondary: string }
   }
   lineup: {
     visible: boolean
@@ -161,6 +174,7 @@ const defaultState: GraphicsState = {
     teamLogo: '',
     isOwnGoal: false,
     isPenalty: false,
+    team: 'home',
   },
   card: {
     visible: false,
@@ -170,6 +184,7 @@ const defaultState: GraphicsState = {
     cardTime: '',
     teamColor: '#14b8a6',
     teamLogo: '',
+    team: 'home',
   },
   substitution: {
     visible: false,
@@ -179,6 +194,7 @@ const defaultState: GraphicsState = {
     numberOut: '',
     teamColor: '#14b8a6',
     teamLogo: '',
+    team: 'home',
   },
   vsGraphic: {
     visible: false,
@@ -196,6 +212,7 @@ const defaultState: GraphicsState = {
     number: '',
     teamColor: '#14b8a6',
     teamLogo: '',
+    team: 'home',
   },
   lineup: {
     visible: false,
@@ -312,6 +329,56 @@ function handleMessage(data: any, ws: WebSocket) {
         const sanitized = sanitizeUpdatePayload(data.graphic)
         if (sanitized) {
           currentState = { ...currentState, ...sanitized }
+
+          // Normalize/infer team fields for event graphics.
+          // Some clients historically omitted `team` and relied on colors/logos; if `team` is missing/invalid
+          // the renderer defaults to "home", which looks like the wrong side animating.
+          const normalizeTeam = (t: any): 'home' | 'away' | undefined => {
+            if (t === 'home' || t === 'away') return t
+            if (typeof t === 'string') {
+              const s = t.toLowerCase().trim()
+              if (s === 'home') return 'home'
+              if (s === 'away') return 'away'
+            }
+            return undefined
+          }
+
+          const inferTeam = (teamColor?: any, teamLogo?: any): 'home' | 'away' | undefined => {
+            const home = currentState?.scoreBug?.homeTeam
+            const away = currentState?.scoreBug?.awayTeam
+            const logo = typeof teamLogo === 'string' ? teamLogo : ''
+            const color = typeof teamColor === 'string' ? teamColor : ''
+
+            if (logo && away?.logo && logo === away.logo) return 'away'
+            if (logo && home?.logo && logo === home.logo) return 'home'
+
+            if (color && away?.color && color.toLowerCase() === away.color.toLowerCase()) return 'away'
+            if (color && home?.color && color.toLowerCase() === home.color.toLowerCase()) return 'home'
+
+            return undefined
+          }
+
+          if (currentState.card) {
+            const normalized = normalizeTeam((currentState as any).card.team)
+            ;(currentState as any).card.team =
+              normalized ?? inferTeam((currentState as any).card.teamColor, (currentState as any).card.teamLogo) ?? 'home'
+          }
+          if (currentState.goal) {
+            const normalized = normalizeTeam((currentState as any).goal.team)
+            ;(currentState as any).goal.team =
+              normalized ?? inferTeam((currentState as any).goal.teamColor, (currentState as any).goal.teamLogo) ?? 'home'
+          }
+          if (currentState.substitution) {
+            const normalized = normalizeTeam((currentState as any).substitution.team)
+            ;(currentState as any).substitution.team =
+              normalized ?? inferTeam((currentState as any).substitution.teamColor, (currentState as any).substitution.teamLogo) ?? 'home'
+          }
+          if ((currentState as any).nameplate) {
+            const normalized = normalizeTeam((currentState as any).nameplate.team)
+            ;(currentState as any).nameplate.team =
+              normalized ?? inferTeam((currentState as any).nameplate.teamColor, (currentState as any).nameplate.teamLogo) ?? 'home'
+          }
+
           console.log('[WebSocket] State updated:', {
             scoreBug: currentState.scoreBug?.visible,
             lowerThird: currentState.lowerThird?.visible,
@@ -320,6 +387,7 @@ function handleMessage(data: any, ws: WebSocket) {
             sub: currentState.substitution?.visible,
             vs: currentState.vsGraphic?.visible,
             lineup: currentState.lineup?.visible,
+            cardTeam: (currentState as any).card?.team,
           })
           broadcast({ type: 'state', data: currentState })
         }
@@ -430,8 +498,13 @@ function handleMessage(data: any, ws: WebSocket) {
             playerNumber: goalData.playerNumber || '',
             goalTime: goalData.goalTime || '',
             teamColor: goalData.teamColor || '#14b8a6',
+            teamLogo: goalData.teamLogo || '',
             isOwnGoal: goalData.isOwnGoal ?? false,
             isPenalty: goalData.isPenalty ?? false,
+            team: goalData.team || currentState.goal.team || 'home',
+            tournamentColor: goalData.tournamentColor || currentState.goal.tournamentColor,
+            homeColors: goalData.homeColors || currentState.goal.homeColors,
+            awayColors: goalData.awayColors || currentState.goal.awayColors,
           }
         }
         
@@ -444,6 +517,10 @@ function handleMessage(data: any, ws: WebSocket) {
             cardType: cardData.cardType || 'yellow',
             cardTime: cardData.cardTime || '',
             teamColor: cardData.teamColor || '#14b8a6',
+            teamLogo: cardData.teamLogo || '',
+            team: cardData.team || currentState.card.team || 'home',
+            homeColors: cardData.homeColors || currentState.card.homeColors,
+            awayColors: cardData.awayColors || currentState.card.awayColors,
           }
         }
         
@@ -456,6 +533,10 @@ function handleMessage(data: any, ws: WebSocket) {
             numberIn: subData.numberIn || '',
             numberOut: subData.numberOut || '',
             teamColor: subData.teamColor || '#14b8a6',
+            teamLogo: subData.teamLogo || '',
+            team: subData.team || currentState.substitution.team || 'home',
+            homeColors: subData.homeColors || currentState.substitution.homeColors,
+            awayColors: subData.awayColors || currentState.substitution.awayColors,
           }
         }
         
@@ -467,6 +548,10 @@ function handleMessage(data: any, ws: WebSocket) {
             position: nameplateData.position || '',
             number: nameplateData.number || '',
             teamColor: nameplateData.teamColor || '#14b8a6',
+            teamLogo: nameplateData.teamLogo || '',
+            team: nameplateData.team || currentState.nameplate.team || 'home',
+            homeColors: nameplateData.homeColors || currentState.nameplate.homeColors,
+            awayColors: nameplateData.awayColors || currentState.nameplate.awayColors,
           }
         }
         

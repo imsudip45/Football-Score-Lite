@@ -1010,6 +1010,14 @@ export function LiveControl() {
                 updateMatch({ 
                   homeScore: 0, 
                   awayScore: 0, 
+                  homeShotsOnTarget: 0,
+                  awayShotsOnTarget: 0,
+                  homeFouls: 0,
+                  awayFouls: 0,
+                  homeOffsides: 0,
+                  awayOffsides: 0,
+                  homeCorners: 0,
+                  awayCorners: 0,
                   period: 'pre', 
                   status: 'draft',
                   events: [],
@@ -1876,10 +1884,20 @@ export function LiveControl() {
                         toggleCard(false)
                       } else {
                         hideEventGraphics()
+                        // Never show an "empty" card overlay.
+                        // Prefer showing the most recent pending card event; otherwise open the modal to collect details.
+                        const latestCardEvent = pendingEvents.cards[pendingEvents.cards.length - 1]
+                        if (latestCardEvent) {
                         setTimeout(() => {
-                          toggleCard(true)
+                            showEventGraphic(latestCardEvent)
                           markEventsAsShown('card')
                         }, 100)
+                        } else {
+                          // Open card modal (defaults to yellow) so operator selects player + team.
+                          setSelectedEventType('yellow')
+                          setCapturedMatchTime(matchTime)
+                          setEventModalOpen(true)
+                        }
                       }
                     }}
                   >

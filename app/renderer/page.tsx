@@ -21,8 +21,8 @@ interface GraphicsState {
     leagueShortName?: string;
     leagueLogo?: string;
     leagueColor?: string;
-    homeTeam: { name: string; shortName: string; score: number; color: string; secondaryColor?: string; logo?: string };
-    awayTeam: { name: string; shortName: string; score: number; color: string; secondaryColor?: string; logo?: string };
+    homeTeam: { name: string; shortName: string; score: number; color: string; secondaryColor?: string; logo?: string; yellowCards?: number; redCards?: number };
+    awayTeam: { name: string; shortName: string; score: number; color: string; secondaryColor?: string; logo?: string; yellowCards?: number; redCards?: number };
     timer: { minutes: number; seconds: number; period: string; extra?: number };
     penalties?: { home: number; away: number };
     possession?: 'home' | 'away' | null;
@@ -143,8 +143,8 @@ const defaultState: GraphicsState = {
     leagueShortName: 'NSL',
     leagueLogo: '',
     leagueColor: '#EF3E42',
-    homeTeam: { name: 'Home', shortName: 'HOM', score: 0, color: '#A50044', secondaryColor: '#A50044', logo: '' },
-    awayTeam: { name: 'Away', shortName: 'AWY', score: 0, color: '#00529F', secondaryColor: '#00529F', logo: '' },
+    homeTeam: { name: 'Home', shortName: 'HOM', score: 0, color: '#A50044', secondaryColor: '#A50044', logo: '', yellowCards: 0, redCards: 0 },
+    awayTeam: { name: 'Away', shortName: 'AWY', score: 0, color: '#00529F', secondaryColor: '#00529F', logo: '', yellowCards: 0, redCards: 0 },
     timer: { minutes: 0, seconds: 0, period: '1st', extra: 0 },
     penalties: { home: 0, away: 0 },
     possession: null,
@@ -306,9 +306,38 @@ export default function RendererPage() {
               // Merge each graphic's state
               Object.keys(msg.data).forEach(key => {
                 if (newState[key as keyof GraphicsState] && msg.data[key]) {
+                  // Special-case scoreBug: deep-merge teams so locally-maintained fields (e.g., card counts)
+                  // aren't wiped by frequent timer/score updates that don't include those fields.
+                  if (key === 'scoreBug') {
+                    const prevSB = (newState as any).scoreBug;
+                    const incomingSB = msg.data.scoreBug;
+                    (newState as any).scoreBug = {
+                      ...prevSB,
+                      ...incomingSB,
+                      homeTeam: { ...prevSB.homeTeam, ...(incomingSB?.homeTeam || {}) },
+                      awayTeam: { ...prevSB.awayTeam, ...(incomingSB?.awayTeam || {}) },
+                    };
+                  } else {
                   (newState as any)[key] = { ...(newState as any)[key], ...msg.data[key] };
                 }
+                }
               });
+
+              // Auto-accumulate team card counts for scorebug when a NEW card overlay is triggered.
+              // (Control/server doesn't currently send aggregated card totals.)
+              const prevCardVisible = prev.card?.visible;
+              const nextCardVisible = newState.card?.visible;
+              if (!prevCardVisible && nextCardVisible) {
+                const team = newState.card?.team;
+                const cardType = newState.card?.cardType;
+                const isYellow = cardType === 'yellow';
+                const isRed = cardType === 'red';
+                if (team === 'home' || team === 'away') {
+                  const teamObj = team === 'home' ? newState.scoreBug.homeTeam : newState.scoreBug.awayTeam;
+                  if (isYellow) teamObj.yellowCards = (teamObj.yellowCards ?? 0) + 1;
+                  if (isRed) teamObj.redCards = (teamObj.redCards ?? 0) + 1;
+                }
+              }
               
               updateAnimations(newState);
               return newState;
@@ -371,6 +400,8 @@ export default function RendererPage() {
               logo: state.scoreBug.homeTeam.logo,
               color: state.scoreBug.homeTeam.color,
               secondaryColor: state.scoreBug.homeTeam.secondaryColor,
+              yellowCards: state.scoreBug.homeTeam.yellowCards,
+              redCards: state.scoreBug.homeTeam.redCards,
             }}
             awayTeam={{
               shortName: state.scoreBug.awayTeam.shortName,
@@ -378,6 +409,8 @@ export default function RendererPage() {
               logo: state.scoreBug.awayTeam.logo,
               color: state.scoreBug.awayTeam.color,
               secondaryColor: state.scoreBug.awayTeam.secondaryColor,
+              yellowCards: state.scoreBug.awayTeam.yellowCards,
+              redCards: state.scoreBug.awayTeam.redCards,
             }}
             timer={{
               minutes: state.scoreBug.timer.minutes,

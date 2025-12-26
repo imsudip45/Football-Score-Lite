@@ -510,7 +510,20 @@ export async function getOfficials(tournamentId?: string): Promise<Official[]> {
   let officials: DBOfficial[]
 
   if (tournamentId) {
-    officials = await database.officials.where("tournamentId").equals(tournamentId).sortBy("name")
+    // Include "global" officials (no tournamentId) as well, so officials created/imported
+    // without a tournament selection don't appear to "disappear" when a tournament is selected.
+    //
+    // NOTE: IndexedDB keys cannot be `undefined`, and attempting to query undefined/null via
+    // IDBKeyRange will throw. So we query the selected tournament via index, and fetch the
+    // "global" ones via a filter, then merge.
+    const [scoped, global] = await Promise.all([
+      database.officials.where("tournamentId").equals(tournamentId).toArray(),
+      database.officials.filter((o) => !o.tournamentId).toArray(),
+    ])
+
+    const mergedById = new Map<string, DBOfficial>()
+    for (const o of [...scoped, ...global]) mergedById.set(o.id, o)
+    officials = Array.from(mergedById.values()).sort((a, b) => a.name.localeCompare(b.name))
   } else {
     officials = await database.officials.orderBy("name").toArray()
   }

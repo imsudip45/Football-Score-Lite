@@ -211,7 +211,7 @@ const EventOverlay: React.FC<EventOverlayProps> = ({
             style={{ borderBottom: `4px solid ${NSL_COLORS.blue}` }}
           >
             <div 
-              className="flex-1 flex items-center justify-center pl-16" 
+              className="flex-1 flex items-center justify-center pl-13" 
               style={Object.keys(getStyle('accent')).length > 0 ? getStyle('accent') : { backgroundColor: NSL_COLORS.darkGrey }}
             >
               <span 
@@ -221,10 +221,12 @@ const EventOverlay: React.FC<EventOverlayProps> = ({
                 {variant === 'yellow-card' ? 'YELLOW CARD' : 'RED CARD'}
               </span>
             </div>
-            <div className="h-10 bg-white flex items-center justify-center pl-16">
+            <div className="h-10 bg-white flex items-center justify-center pl-10">
               <span 
                 className="font-condensed text-2xl uppercase tracking-wide leading-none pt-1"
-                style={{ color: getColor('text') || '#111827' }}
+                // Player row sits on a light background; don't reuse the header "text" color (often white).
+                // Allow an optional override via 'player-text', otherwise default to dark for readability.
+                style={{ color: getColor('player-text') || '#111827' }}
               >{mainText}</span>
             </div>
             <div className={`absolute left-6 top-1/2 z-30 drop-shadow-md ${animate === 'in' ? 'anim-eo-card-in' : 'anim-eo-card-out'}`}>

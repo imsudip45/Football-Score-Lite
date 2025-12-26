@@ -13,7 +13,7 @@ import {
   UserPlus, UserMinus, Star, Loader2, ArrowRight, Save, Gamepad2
 } from "lucide-react"
 import { toast } from "sonner"
-import type { Team, Player, LineupPlayer, Match, FormationType } from "@/lib/types"
+import type { Team, Player, LineupPlayer, Match, FormationType, Official } from "@/lib/types"
 import * as db from "@/lib/database"
 import { getFormationNames } from "@/lib/formations"
 
@@ -41,6 +41,10 @@ export function LineupSetup() {
   const [isSaving, setIsSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
 
+  // Officials (assign 4 required roles during match setup)
+  const [availableOfficials, setAvailableOfficials] = useState<Official[]>([])
+  const [matchOfficials, setMatchOfficials] = useState<Official[]>([])
+
   // Lineup states - players selected for starting 11 and subs
   const [homeLineup, setHomeLineup] = useState<Player[]>([])
   const [homeSubs, setHomeSubs] = useState<Player[]>([])
@@ -67,6 +71,11 @@ export function LineupSetup() {
     loadFixtures()
   }, [selectedTournamentId])
 
+  // Load available officials for the selected tournament
+  useEffect(() => {
+    loadOfficials()
+  }, [selectedTournamentId])
+
   // Initialize lineups when fixture is selected
   useEffect(() => {
     if (selectedFixture) {
@@ -82,6 +91,9 @@ export function LineupSetup() {
       // Initialize formations from fixture data
       setHomeFormation(selectedFixture.homeFormation || "")
       setAwayFormation(selectedFixture.awayFormation || "")
+
+      // Initialize officials from fixture data
+      setMatchOfficials(selectedFixture.officials || [])
     }
   }, [selectedFixtureId, selectedFixture])
 
@@ -117,6 +129,16 @@ export function LineupSetup() {
     }
   }
 
+  const loadOfficials = async () => {
+    try {
+      const dbOfficials = await db.getOfficials(selectedTournamentId || undefined)
+      setAvailableOfficials(dbOfficials)
+    } catch (error) {
+      console.error("Error loading officials:", error)
+      setAvailableOfficials([])
+    }
+  }
+
   // Auto-save lineup changes to database
   const saveLineupToDatabase = useCallback(async () => {
     if (!selectedFixture || !homeTeam || !awayTeam) return
@@ -141,6 +163,7 @@ export function LineupSetup() {
         awayBench: awayBenchFormatted,
         homeFormation: homeFormation || undefined,
         awayFormation: awayFormation || undefined,
+        officials: matchOfficials,
         status: newStatus,
       } as Match)
 
@@ -152,6 +175,7 @@ export function LineupSetup() {
         awayBench: awayBenchFormatted,
         homeFormation: homeFormation || undefined,
         awayFormation: awayFormation || undefined,
+        officials: matchOfficials,
         status: newStatus,
       })
 
@@ -161,7 +185,7 @@ export function LineupSetup() {
     } finally {
       setIsSaving(false)
     }
-  }, [selectedFixture, homeTeam, awayTeam, homeLineup, homeSubs, awayLineup, awaySubs, homeFormation, awayFormation, maxLineup, updateMatch])
+  }, [selectedFixture, homeTeam, awayTeam, homeLineup, homeSubs, awayLineup, awaySubs, homeFormation, awayFormation, matchOfficials, maxLineup, updateMatch])
 
   // Debounced auto-save function
   const triggerAutoSave = useCallback(() => {
@@ -176,7 +200,7 @@ export function LineupSetup() {
 
   // Trigger auto-save when lineup changes
   useEffect(() => {
-    if (selectedFixture && (homeLineup.length > 0 || awayLineup.length > 0 || homeFormation || awayFormation)) {
+    if (selectedFixture && (homeLineup.length > 0 || awayLineup.length > 0 || homeFormation || awayFormation || matchOfficials.length > 0)) {
       triggerAutoSave()
     }
     
@@ -185,7 +209,38 @@ export function LineupSetup() {
         clearTimeout(saveTimeoutRef.current)
       }
     }
-  }, [homeLineup, homeSubs, awayLineup, awaySubs, homeFormation, awayFormation, triggerAutoSave, selectedFixture])
+  }, [homeLineup, homeSubs, awayLineup, awaySubs, homeFormation, awayFormation, matchOfficials, triggerAutoSave, selectedFixture])
+
+  const roleLabels: Record<Official["role"], string> = {
+    referee: "Referee",
+    ar1: "Assistant Referee 1",
+    ar2: "Assistant Referee 2",
+    fourth: "4th Official",
+  }
+
+  const getAssignedOfficial = (role: Official["role"]) => matchOfficials.find((o) => o.role === role)
+
+  const handleAssignOfficial = (role: Official["role"], officialId: string) => {
+    const base = availableOfficials.find((o) => o.id === officialId)
+    if (!base) return
+
+    // Remove any previous assignment for this role, then set the new one.
+    const next: Official[] = [
+      ...matchOfficials.filter((o) => o.role !== role),
+      { ...base, role },
+    ]
+
+    setMatchOfficials(next)
+    updateMatch({ officials: next })
+    triggerAutoSave()
+  }
+
+  const handleClearOfficial = (role: Official["role"]) => {
+    const next = matchOfficials.filter((o) => o.role !== role)
+    setMatchOfficials(next)
+    updateMatch({ officials: next })
+    triggerAutoSave()
+  }
 
   // Get available players (not in lineup or subs)
   const getAvailablePlayers = (team: Team | undefined, lineup: Player[], subs: Player[]) => {
@@ -739,6 +794,71 @@ export function LineupSetup() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Officials Selection (4 required roles) */}
+      {selectedFixture && (
+        <Card className="glass-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Match Officials</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {(
+                [
+                  "referee",
+                  "ar1",
+                  "ar2",
+                  "fourth",
+                ] as const
+              ).map((role) => {
+                const assigned = getAssignedOfficial(role)
+                const usedIds = new Set(matchOfficials.filter((o) => o.role !== role).map((o) => o.id))
+
+                return (
+                  <div key={role} className="space-y-1">
+                    <label className="text-sm font-medium block">{roleLabels[role]}</label>
+                    <div className="flex gap-2">
+                      <Select
+                        value={assigned?.id || ""}
+                        onValueChange={(id) => handleAssignOfficial(role, id)}
+                      >
+                        <SelectTrigger className="bg-secondary flex-1">
+                          <SelectValue placeholder="Select official..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <ScrollArea className="h-[220px]">
+                            {availableOfficials.length === 0 ? (
+                              <div className="px-3 py-2 text-sm text-muted-foreground">
+                                No officials found. Add officials in the Officials page.
+                              </div>
+                            ) : (
+                              availableOfficials
+                                .filter((o) => !usedIds.has(o.id))
+                                .map((o) => (
+                                  <SelectItem key={o.id} value={o.id}>
+                                    {o.name}
+                                  </SelectItem>
+                                ))
+                            )}
+                          </ScrollArea>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="outline"
+                        className="shrink-0"
+                        onClick={() => handleClearOfficial(role)}
+                        disabled={!assigned}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Team Tabs - only show if fixture is selected */}
       {selectedFixture && (
