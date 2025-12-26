@@ -12,13 +12,7 @@ import BreakingBanner from '@/components/graphics/BreakingBanner';
 import MatchOfficials from '@/components/graphics/MatchOfficials';
 import { useGraphicsCustomizationSync } from '@/lib/graphics-customization-store';
 
-// Build WebSocket URL from current host so renderer works over the network
-const getWsUrl = () => {
-  if (typeof window === 'undefined') return 'ws://localhost:8080'
-  const host = window.location.hostname || 'localhost'
-  return `ws://${host}:8080`
-}
-const WS_URL = getWsUrl();
+const WS_URL = 'ws://localhost:8080';
 
 interface GraphicsState {
   scoreBug: {

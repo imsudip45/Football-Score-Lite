@@ -431,17 +431,13 @@ export default function MatchStatsLowerThird({
             <div className="relative flex h-full gap-1 overflow-visible">
               {/* Timer Box - centered above the two score boxes, clean slide up/down */}
               {timer && (
-                <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-48 h-10 overflow-hidden" style={{ pointerEvents: 'none' }}>
+                <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-48 h-20 overflow-visible" style={{ pointerEvents: 'none' }}>
                   <div 
                     className={`h-10 flex items-center justify-center ${
-                      (phase === 'logos-split' || phase === 'content') ? 'anim-timer-box-in' : 
-                      (phase === 'timer-out') ? 'anim-timer-box-out' : 
-                      ''
+                      phase === 'timer-out' ? 'anim-timer-box-out' : 'anim-timer-box-in'
                     }`}
                     style={{
                       ...(Object.keys(getStyle('timer-box')).length > 0 ? getStyle('timer-box') : { backgroundColor: '#292a2bff' }),
-                      transform: 'translateY(60px)',
-                      opacity: 0,
                       zIndex: 2,
                     }}
                   >

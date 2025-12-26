@@ -878,15 +878,6 @@ export function LiveControl() {
     )
   }
 
-  // Resolve renderer URL for network access. Allows override via NEXT_PUBLIC_HOST for LAN/IP sharing.
-  const rendererUrl = (() => {
-    if (typeof window === 'undefined') return `http://localhost:3000/renderer`
-    const overrideHost = process.env.NEXT_PUBLIC_HOST
-    const host = overrideHost || window.location.hostname || 'localhost'
-    const port = window.location.port || '3000'
-    return `http://${host}:${port}/renderer`
-  })()
-
   return (
     <div className="mt-0 space-y-2">
       {/* Page header */}
@@ -923,8 +914,8 @@ export function LiveControl() {
             size="sm" 
             className="gap-1 bg-transparent"
             onClick={() => {
-              navigator.clipboard.writeText(rendererUrl)
-              toast.success(`Copied: ${rendererUrl}`)
+              navigator.clipboard.writeText('http://localhost:3000/renderer')
+              toast.success('Renderer URL copied to clipboard')
             }}
           >
             <ExternalLink className="h-4 w-4" />
@@ -937,7 +928,7 @@ export function LiveControl() {
             size="sm" 
             className="gap-1 bg-transparent"
             onClick={() => {
-              window.open(rendererUrl, 'renderer', 'width=1920,height=1080')
+              window.open('http://localhost:3000/renderer', 'renderer', 'width=1920,height=1080')
             }}
           >
             <Monitor className="h-4 w-4" />
@@ -961,12 +952,7 @@ export function LiveControl() {
             size="sm"
             className="gap-1 bg-transparent text-blue-400 hover:text-blue-300 border-blue-500/50"
             onClick={() => {
-              const url = commentatorNetworkUrl || (() => {
-                const overrideHost = process.env.NEXT_PUBLIC_HOST
-                const host = overrideHost || window.location.hostname || 'localhost'
-                const port = window.location.port || '3000'
-                return `http://${host}:${port}/commentator`
-              })()
+              const url = commentatorNetworkUrl || `http://${window.location.hostname}:3000/commentator`
               navigator.clipboard.writeText(url).then(() => {
                 toast.success(`Copied: ${url}`)
               }).catch(() => {
