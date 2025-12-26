@@ -8,22 +8,22 @@ import { getTextColor, getPatternStyleWithAnimation, getPatternAnimationCSS } fr
 // Timer box animation variants
 const timerVariants = {
   hidden: {
-    y: 60,
+    y: 120,
     opacity: 0,
   },
   visible: {
     y: 0,
     opacity: 1,
     transition: {
-      duration: 0.6,
+      duration: 0.8,
       ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
     },
   },
   exit: {
-    y: 60,
+    y: 120,
     opacity: 0,
     transition: {
-      duration: 0.4,
+      duration: 0.6,
       ease: [0.7, 0, 0.84, 0] as [number, number, number, number],
     },
   },
@@ -432,7 +432,7 @@ export default function MatchStatsLowerThird({
             <div className="relative flex h-full gap-1 overflow-visible">
               {/* Timer Box - centered above the two score boxes, Framer Motion animation */}
               <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-49 overflow-visible pointer-events-none" style={{ height: '80px' }}>
-                <AnimatePresence>
+                <AnimatePresence initial={false} mode="wait">
                   {timer && (phase === 'logos-split' || phase === 'content') && (
                     <motion.div
                       key="timer-box"
