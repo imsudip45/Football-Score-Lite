@@ -231,13 +231,13 @@ export default function MatchStatsLowerThird({
           100% { transform: translateY(70px); opacity: 0; }
         }
         .anim-timer-box-in { 
-          animation: timerBoxIn 1.1s cubic-bezier(0.25, 0.9, 0.3, 1.05) forwards; 
+          animation: timerBoxIn 1.25s cubic-bezier(0.25, 0.9, 0.3, 1.05) forwards; 
           transform: translateY(70px);
           opacity: 0.35;
           will-change: transform, opacity;
         }
         .anim-timer-box-out { 
-          animation: timerBoxOut 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards; 
+          animation: timerBoxOut 0.95s cubic-bezier(0.4, 0, 0.2, 1) forwards; 
           will-change: transform, opacity;
         }
         
@@ -432,9 +432,8 @@ export default function MatchStatsLowerThird({
                 <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-49 h-10 overflow-hidden">
                   <div 
                     className={`h-10 flex items-center justify-center ${
-                      phase === 'logos-split' || phase === 'content' ? 'anim-timer-box-in' : 
-                      phase === 'scorers-out' ? '' :
-                      phase === 'timer-out' ? 'anim-timer-box-out' : 
+                      (phase === 'logos-split' || phase === 'content') ? 'anim-timer-box-in' : 
+                      (phase === 'timer-out') ? 'anim-timer-box-out' : 
                       'opacity-0'
                     }`}
                     style={{
