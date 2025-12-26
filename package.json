@@ -57,6 +57,7 @@
     "date-fns": "latest",
     "dexie": "^4.2.1",
     "embla-carousel-react": "8.5.1",
+    "framer-motion": "^12.23.26",
     "immer": "latest",
     "input-otp": "1.4.1",
     "jszip": "^3.10.1",
@@ -111,18 +112,24 @@
       {
         "from": "public",
         "to": "public",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "win": {
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "build/icon.ico"
@@ -137,7 +144,10 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "icon": "build/icon.icns",
@@ -147,11 +157,15 @@
       "target": [
         {
           "target": "AppImage",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "deb",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "build/icon.png",

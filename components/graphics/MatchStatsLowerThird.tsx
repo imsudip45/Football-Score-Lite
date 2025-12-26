@@ -1,8 +1,33 @@
 'use client';
 
 import { useState, useEffect, useLayoutEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGraphicsCustomizationStore } from '@/lib/graphics-customization-store';
 import { getTextColor, getPatternStyleWithAnimation, getPatternAnimationCSS } from './customization-utils';
+
+// Timer box animation variants
+const timerVariants = {
+  hidden: {
+    y: 60,
+    opacity: 0,
+  },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      duration: 0.6,
+      ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
+    },
+  },
+  exit: {
+    y: 60,
+    opacity: 0,
+    transition: {
+      duration: 0.4,
+      ease: [0.7, 0, 0.84, 0] as [number, number, number, number],
+    },
+  },
+};
 
 interface MatchStatsLowerThirdProps {
   animate: 'in' | 'out';
@@ -219,32 +244,6 @@ export default function MatchStatsLowerThird({
         .anim-lt-top-in { animation: ltTopIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards 0s; transform: translateY(100%); opacity: 0; }
         .anim-lt-top-out { animation: ltTopOut 0.25s cubic-bezier(0.7, 0, 0.84, 0) forwards 0s; }
         
-        /* Timer box - initial hidden state and animations */
-        .timer-box {
-          transform: translateY(60px);
-          opacity: 0;
-        }
-        
-        .timer-box-visible {
-          transform: translateY(0);
-          opacity: 1;
-        }
-        
-        @keyframes timerBoxIn {
-          0%   { transform: translateY(60px); opacity: 0; }
-          100% { transform: translateY(0);    opacity: 1; }
-        }
-        @keyframes timerBoxOut {
-          0%   { transform: translateY(0);    opacity: 1; }
-          100% { transform: translateY(60px); opacity: 0; }
-        }
-        .anim-timer-box-in { 
-          animation: timerBoxIn 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; 
-        }
-        .anim-timer-box-out { 
-          animation: timerBoxOut 0.6s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards; 
-        }
-        
         /* Dynamic pattern animation keyframes */
         ${getPatternAnimationCSS()}
       `}</style>
@@ -431,39 +430,48 @@ export default function MatchStatsLowerThird({
 
             {/* Score Block with Timer Box above */}
             <div className="relative flex h-full gap-1 overflow-visible">
-              {/* Timer Box - centered above the two score boxes, clean slide up/down */}
-              {timer && (
-                <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-49 overflow-visible pointer-events-none" style={{ height: '80px' }}>
-                  <div 
-                    className={`h-10 flex items-center justify-center ${
-                      phase === 'logos-split' ? 'timer-box anim-timer-box-in' :
-                      phase === 'content' ? 'timer-box-visible' :
-                      phase === 'timer-out' ? 'timer-box-visible anim-timer-box-out' :
-                      'timer-box'
-                    }`}
-                    style={{
-                      ...(Object.keys(getStyle('timer-box')).length > 0 ? getStyle('timer-box') : { backgroundColor: '#292a2bff' }),
-                      zIndex: 2,
-                    }}
-                  >
-                    <span 
-                      className="font-sans font-bold text-2xl tracking-wider"
-                      style={{ color: getColor('timer-box') || '#ffffff' }}
+              {/* Timer Box - centered above the two score boxes, Framer Motion animation */}
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-49 overflow-visible pointer-events-none" style={{ height: '80px' }}>
+                <AnimatePresence>
+                  {timer && phase !== 'league' && phase !== 'league-out' && phase !== 'logos-center' && (
+                    <motion.div
+                      key="timer-box"
+                      variants={timerVariants}
+                      initial="hidden"
+                      animate={
+                        phase === 'logos-split' || phase === 'content'
+                          ? 'visible'
+                          : 'hidden'
+                      }
+                      exit="exit"
+                      className="h-10 flex items-center justify-center"
+                      style={{
+                        ...(Object.keys(getStyle('timer-box')).length > 0
+                          ? getStyle('timer-box')
+                          : { backgroundColor: '#292a2bff' }),
+                        zIndex: 2,
+                      }}
                     >
-                      {timer.isRunning ? (
-                        `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`
-                      ) : (
-                        timer.period === 'ht' ? 'HALF TIME' :
-                        timer.period === 'ft' ? 'FULL TIME' :
-                        timer.period === 'pre' ? 'PRE MATCH' :
-                        timer.period === 'et1' ? 'EXTRA TIME' :
-                        timer.period === 'et2' ? 'EXTRA TIME' :
-                        `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`
-                      )}
-                    </span>
-                  </div>
-                </div>
-              )}
+                      <span
+                        className="font-sans font-bold text-2xl tracking-wider"
+                        style={{ color: getColor('timer-box') || '#ffffff' }}
+                      >
+                        {timer.isRunning
+                          ? `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`
+                          : timer.period === 'ht'
+                          ? 'HALF TIME'
+                          : timer.period === 'ft'
+                          ? 'FULL TIME'
+                          : timer.period === 'pre'
+                          ? 'PRE MATCH'
+                          : timer.period === 'et1' || timer.period === 'et2'
+                          ? 'EXTRA TIME'
+                          : `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`}
+                      </span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
               <div 
                 className="w-24 flex items-center justify-center relative z-10"
                 style={Object.keys(getStyle('score-box')).length > 0 ? getStyle('score-box') : { backgroundColor: '#E6E7E8' }}
