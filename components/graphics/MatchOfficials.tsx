@@ -4,19 +4,12 @@ import React from 'react';
 import { useGraphicsCustomizationStore } from '@/lib/graphics-customization-store';
 import { getTextColor, getFontSize, getTextStyle, getTextStyleCSS, getPatternStyleWithAnimation, getPatternAnimationCSS } from './customization-utils';
 
-// Icons
-const WhistleIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-full h-full">
-    <circle cx="12" cy="12" r="10" />
-    <path d="M12 8v4l3 3" />
-  </svg>
-);
-
-const FlagIcon = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
-    <path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/>
-  </svg>
-);
+// Icons (PNG assets under /public/officials-icons)
+const ICONS = {
+  referee: '/officials-icons/Refree.png',
+  fourth: '/officials-icons/Match_refree.png',
+  assistant: '/officials-icons/linesman.png',
+};
 
 interface Official {
   role: string;
@@ -58,10 +51,14 @@ const MatchOfficials: React.FC<MatchOfficialsProps> = ({
 
   const getIcon = (role: string) => {
     const lowerRole = role.toLowerCase();
-    if (lowerRole.includes('referee') || lowerRole.includes('official') || lowerRole.includes('4th')) {
-      return <WhistleIcon />;
-    }
-    return <FlagIcon />;
+    const src =
+      lowerRole.includes('4th')
+        ? ICONS.fourth
+        : lowerRole.includes('assistant') || lowerRole.includes('linesman') || lowerRole.includes('ar')
+          ? ICONS.assistant
+          : ICONS.referee;
+
+    return <img src={src} alt="" className="w-6 h-6 object-contain" />;
   };
 
   // Check if role is a referee/official type (for color highlighting)
@@ -83,10 +80,7 @@ const MatchOfficials: React.FC<MatchOfficialsProps> = ({
   // Get role highlight color - use textColor from role-highlight component
   const roleHighlightColor = getColor('role-highlight') || tournamentColor;
   
-  // Get icon color from the fill color of official-icon component
-  const components = customization?.components || [];
-  const iconComponent = components.find((c: { id: string }) => c.id === 'official-icon');
-  const iconColor = iconComponent?.fill?.color || '#F59E0B';
+  // Icon colors are baked into the PNGs; keep this here in case we later switch to SVG/mask.
 
   return (
     <div className={`relative w-fit ${animate === 'out' ? 'anim-mo-container-out' : ''}`}>
@@ -235,10 +229,7 @@ const MatchOfficials: React.FC<MatchOfficialsProps> = ({
                 </div>
                 
                 {/* Icon */}
-                <div 
-                  className="w-6 h-6 relative z-10"
-                  style={{ color: iconColor }}
-                >
+                <div className="w-6 h-6 relative z-10">
                   {getIcon(official.role)}
                 </div>
               </div>
