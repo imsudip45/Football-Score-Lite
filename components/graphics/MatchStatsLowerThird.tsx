@@ -1,79 +1,8 @@
 'use client';
 
 import { useState, useEffect, useLayoutEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useGraphicsCustomizationStore } from '@/lib/graphics-customization-store';
 import { getTextColor, getPatternStyleWithAnimation, getPatternAnimationCSS } from './customization-utils';
-
-// Timer box animation variants
-const timerVariants = {
-  hidden: {
-    y: 120,
-    opacity: 0,
-  },
-  visible: {
-    y: 0,
-    opacity: 1,
-    transition: {
-      duration: 0.8,
-      ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
-    },
-  },
-  exit: {
-    y: 120,
-    opacity: 0,
-    transition: {
-      duration: 0.6,
-      ease: [0.7, 0, 0.84, 0] as [number, number, number, number],
-    },
-  },
-};
-
-// League badge animation variants (intro and outro)
-const leagueIntroVariants = {
-  hidden: { y: -60, opacity: 0, scale: 0.85 },
-  enter: { y: 0, opacity: 1, scale: 1, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
-  exit: { y: 160, opacity: 0, scale: 0.95, transition: { duration: 0.45, ease: [0.7, 0, 0.84, 0] as [number, number, number, number] } },
-};
-
-const leagueOutroVariants = {
-  hidden: { scale: 0, opacity: 0 },
-  enter: { scale: 1, opacity: 1, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
-  exit: { y: 160, opacity: 0, scale: 0.95, transition: { duration: 0.45, ease: [0.7, 0, 0.84, 0] as [number, number, number, number] } },
-};
-
-// Logo center pop variants
-const logosCenterVariants = {
-  hidden: { scale: 0, opacity: 0 },
-  visible: { scale: 1, opacity: 1, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
-  exit: { scale: 0, opacity: 0, transition: { duration: 0.4, ease: [0.7, 0, 0.84, 0] as [number, number, number, number] } },
-};
-
-// Logo split/merge variants
-const logoSplitLeftVariants = {
-  hidden: { x: 484, opacity: 0 },
-  split: { x: 0, opacity: 1, transition: { duration: 0.95, ease: [0.25, 0.8, 0.25, 1] as [number, number, number, number] } },
-  merge: { x: 484, opacity: 1, transition: { duration: 0.95, ease: [0.4, 0, 0.2, 1] as [number, number, number, number] } },
-};
-
-const logoSplitRightVariants = {
-  hidden: { x: -484, opacity: 0 },
-  split: { x: 0, opacity: 1, transition: { duration: 0.95, ease: [0.25, 0.8, 0.25, 1] as [number, number, number, number] } },
-  merge: { x: -484, opacity: 1, transition: { duration: 0.95, ease: [0.4, 0, 0.2, 1] as [number, number, number, number] } },
-};
-
-// Center bar visibility
-const centerBarVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
-};
-
-// Scorers slide variants
-const scorersVariants = {
-  hidden: { y: 40, opacity: 0 },
-  visible: { y: 0, opacity: 1, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
-  exit: { y: 40, opacity: 0, transition: { duration: 0.25, ease: [0.7, 0, 0.84, 0] as [number, number, number, number] } },
-};
 
 interface MatchStatsLowerThirdProps {
   animate: 'in' | 'out';
@@ -145,7 +74,6 @@ export default function MatchStatsLowerThird({
   const getColor = (id: string) => getTextColor(customization, id);
   const getScoreBugStyle = (id: string) => getPatternStyleWithAnimation(scoreBugCustomization, id, teamColors);
   const getScoreBugColor = (id: string) => getTextColor(scoreBugCustomization, id);
-  const isLogosActive = ['logos-split', 'content', 'scorers-out', 'timer-out', 'logos-merge'].includes(phase);
 
   // Immediately set the starting phase when animate changes (before paint)
   useLayoutEffect(() => {
@@ -198,7 +126,7 @@ export default function MatchStatsLowerThird({
         /* Custom font for tournament name - same as scorebug */
         @font-face {
           font-family: 'Snasm';
-          src: url('./Snasm-W05-Regular.ttf') format('truetype');
+          src: url('/Snasm-W05-Regular.ttf') format('truetype');
           font-weight: normal;
           font-style: normal;
         }
@@ -291,226 +219,192 @@ export default function MatchStatsLowerThird({
         .anim-lt-top-in { animation: ltTopIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards 0s; transform: translateY(100%); opacity: 0; }
         .anim-lt-top-out { animation: ltTopOut 0.25s cubic-bezier(0.7, 0, 0.84, 0) forwards 0s; }
         
+        /* Timer box animation - comes up from below immediately when content phase starts */
+        @keyframes timerBoxIn {
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes timerBoxOut {
+          from { transform: translateY(0); opacity: 1; }
+          to { transform: translateY(100%); opacity: 0; }
+        }
+        .anim-timer-box-in { animation: timerBoxIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards 0s; transform: translateY(100%); opacity: 0; }
+        .anim-timer-box-out { animation: timerBoxOut 0.25s cubic-bezier(0.7, 0, 0.84, 0) forwards; }
+        
         /* Dynamic pattern animation keyframes */
         ${getPatternAnimationCSS()}
       `}</style>
 
-      {/* TIMER OVERLAY — kept outside bar to avoid clipping/stacking issues */}
-      <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-[999] pointer-events-none overflow-visible" style={{ height: '200px' }}>
-        <AnimatePresence initial={false}>
-          {timer && (phase === 'logos-split' || phase === 'content') && (
-            <motion.div
-              key="timer-box"
-              variants={timerVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="h-10 flex items-center justify-center"
-              style={{
-                ...(Object.keys(getStyle('timer-box')).length > 0
-                  ? getStyle('timer-box')
-                  : { backgroundColor: '#292a2bff' }),
-              }}
-            >
-              <span
-                className="font-sans font-bold text-2xl tracking-wider"
-                style={{ color: getColor('timer-box') || '#ffffff' }}
+      {/* League Badge - IN: drops in then fades, OUT: appears then exits down */}
+      {/* For IN animation: league (drop in) -> league-out (fade out) */}
+      {(phase === 'league' || phase === 'league-out') && (
+        <div className="absolute left-0 right-0 top-0 bottom-0 flex items-center justify-center z-50 overflow-visible">
+          <div
+            className={`px-8 h-20 flex items-center justify-center ${
+              phase === 'league' ? 'anim-league-badge-in' : 'anim-league-badge-out'
+            }`}
+            style={leagueLogo ? getScoreBugStyle('league-box') : { backgroundColor: leagueColor }}
+          >
+            {leagueLogo ? (
+              <img 
+                src={leagueLogo} 
+                alt={leagueName} 
+                className="h-16 w-auto object-contain drop-shadow-md"
+              />
+            ) : (
+              <span 
+                className="uppercase tracking-wider text-center italic font-bold text-white"
+                style={{ 
+                  fontFamily: "'Snasm', sans-serif",
+                  fontSize: (leagueShortName || leagueName).length <= 3 ? '2.5rem' : (leagueShortName || leagueName).length <= 5 ? '1.75rem' : '1.25rem',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+                }}
               >
-                {timer.isRunning
-                  ? `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`
-                  : timer.period === 'ht'
-                  ? 'HALF TIME'
-                  : timer.period === 'ft'
-                  ? 'FULL TIME'
-                  : timer.period === 'pre'
-                  ? 'PRE MATCH'
-                  : timer.period === 'et1' || timer.period === 'et2'
-                  ? 'EXTRA TIME'
-                  : `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`}
+                {(leagueShortName || leagueName).toUpperCase()}
               </span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      <AnimatePresence initial={false} mode="wait">
-        {(phase === 'league' || phase === 'league-out') && (
-          <motion.div
-            key="league-intro"
-            className="absolute left-0 right-0 top-0 bottom-0 flex items-center justify-center z-50 overflow-visible"
-            variants={leagueIntroVariants}
-            initial="hidden"
-            animate={phase === 'league' ? 'enter' : 'exit'}
-            exit="hidden"
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* For OUT animation: league-in-out (league pops in after logos disappear) -> league-exit (exit down) */}
+      {(phase === 'league-in-out' || phase === 'league-exit') && (
+        <div className="absolute left-0 right-0 top-0 bottom-0 flex items-center justify-center z-50 overflow-visible">
+          <div
+            className={`px-8 h-20 flex items-center justify-center ${
+              phase === 'league-in-out' ? 'anim-league-badge-pop-in' : 'anim-league-badge-exit'
+            }`}
+            style={leagueLogo ? getScoreBugStyle('league-box') : { backgroundColor: leagueColor }}
           >
-            <div
-              className="px-8 h-20 flex items-center justify-center"
-              style={leagueLogo ? getScoreBugStyle('league-box') : { backgroundColor: leagueColor }}
-            >
-              {leagueLogo ? (
-                <img 
-                  src={leagueLogo} 
-                  alt={leagueName} 
-                  className="h-16 w-auto object-contain drop-shadow-md"
-                />
-              ) : (
-                <span 
-                  className="uppercase tracking-wider text-center italic font-bold text-white"
-                  style={{ 
-                    fontFamily: "'Snasm', sans-serif",
-                    fontSize: (leagueShortName || leagueName).length <= 3 ? '2.5rem' : (leagueShortName || leagueName).length <= 5 ? '1.75rem' : '1.25rem',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.3)'
-                  }}
-                >
-                  {(leagueShortName || leagueName).toUpperCase()}
-                </span>
-              )}
-            </div>
-          </motion.div>
-        )}
+            {leagueLogo ? (
+              <img 
+                src={leagueLogo} 
+                alt={leagueName} 
+                className="h-16 w-auto object-contain drop-shadow-md"
+              />
+            ) : (
+              <span 
+                className="uppercase tracking-wider text-center italic font-bold text-white"
+                style={{ 
+                  fontFamily: "'Snasm', sans-serif",
+                  fontSize: (leagueShortName || leagueName).length <= 3 ? '2.5rem' : (leagueShortName || leagueName).length <= 5 ? '1.75rem' : '1.25rem',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.3)'
+                }}
+              >
+                {(leagueShortName || leagueName).toUpperCase()}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
-        {(phase === 'league-in-out' || phase === 'league-exit') && (
-          <motion.div
-            key="league-outro"
-            className="absolute left-0 right-0 top-0 bottom-0 flex items-center justify-center z-50 overflow-visible"
-            variants={leagueOutroVariants}
-            initial="hidden"
-            animate={phase === 'league-in-out' ? 'enter' : 'exit'}
-            exit="hidden"
+      {/* Logo boxes in center - IN: appear then split, OUT: after merge, scale down */}
+      {(phase === 'logos-center' || phase === 'logos-center-out') && (
+        <div className="absolute inset-0 flex items-center justify-center z-40 gap-2">
+          {/* Home Logo Box - always uses team color directly */}
+          <div 
+            className={`w-28 h-20 flex items-center justify-center shadow-lg ${
+              phase === 'logos-center' ? 'anim-logos-center-in' : 'anim-logos-center-out'
+            }`}
+            style={{ backgroundColor: homeTeam.color }}
           >
-            <div
-              className="px-8 h-20 flex items-center justify-center"
-              style={leagueLogo ? getScoreBugStyle('league-box') : { backgroundColor: leagueColor }}
-            >
-              {leagueLogo ? (
-                <img 
-                  src={leagueLogo} 
-                  alt={leagueName} 
-                  className="h-16 w-auto object-contain drop-shadow-md"
-                />
-              ) : (
-                <span 
-                  className="uppercase tracking-wider text-center italic font-bold text-white"
-                  style={{ 
-                    fontFamily: "'Snasm', sans-serif",
-                    fontSize: (leagueShortName || leagueName).length <= 3 ? '2.5rem' : (leagueShortName || leagueName).length <= 5 ? '1.75rem' : '1.25rem',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.3)'
-                  }}
-                >
-                  {(leagueShortName || leagueName).toUpperCase()}
-                </span>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence initial={false} mode="wait">
-        {(phase === 'logos-center' || phase === 'logos-center-out') && (
-          <motion.div
-            key="logos-center"
-            className="absolute inset-0 flex items-center justify-center z-40 gap-2"
-            variants={logosCenterVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
+            {homeTeam.logo && (
+              <img src={homeTeam.logo} alt="Home" className="h-16 w-16 object-contain drop-shadow-md" />
+            )}
+          </div>
+          {/* Away Logo Box - always uses team color directly */}
+          <div 
+            className={`w-28 h-20 flex items-center justify-center shadow-lg ${
+              phase === 'logos-center' ? 'anim-logos-center-in' : 'anim-logos-center-out'
+            }`}
+            style={{ backgroundColor: awayTeam.color }}
           >
-            <div 
-              className="w-28 h-20 flex items-center justify-center shadow-lg"
-              style={{ backgroundColor: homeTeam.color }}
-            >
-              {homeTeam.logo && (
-                <img src={homeTeam.logo} alt="Home" className="h-16 w-16 object-contain drop-shadow-md" />
-              )}
-            </div>
-            <div 
-              className="w-28 h-20 flex items-center justify-center shadow-lg"
-              style={{ backgroundColor: awayTeam.color }}
-            >
-              {awayTeam.logo && (
-                <img src={awayTeam.logo} alt="Away" className="h-16 w-16 object-contain drop-shadow-md" />
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {awayTeam.logo && (
+              <img src={awayTeam.logo} alt="Away" className="h-16 w-16 object-contain drop-shadow-md" />
+            )}
+          </div>
+        </div>
+      )}
 
-      {/* Main content */}
-      <div className="w-full opacity-100">
+      {/* Main content - visible during logos-split, content, timer-out, and logos-merge phases */}
+      <div className={`w-full ${
+        phase === 'league' || phase === 'league-out' || phase === 'logos-center' || 
+        phase === 'logos-center-out' || phase === 'league-in-out' || phase === 'league-exit'
+          ? 'opacity-0' : 'opacity-100'
+      }`}>
         {/* Home Scorers - Attached to top of L3 (from logo box to team name area) */}
-        <AnimatePresence initial={false} mode="wait">
-          {(showScorers === 'home' || showScorers === 'both') && homeTeam.scorers && homeTeam.scorers.length > 0 && (phase === 'logos-split' || phase === 'content' || phase === 'scorers-out') && (
-            <motion.div
-              key="home-scorers"
-              className="absolute bottom-full z-0 flex flex-col justify-center items-end shadow-sm min-h-[40px] left-28 right-[calc(50%+100px)] px-4 py-2 overflow-visible"
-              style={Object.keys(getStyle('scorers-box')).length > 0 ? getStyle('scorers-box') : { backgroundColor: '#6D6E71' }}
-              variants={scorersVariants}
-              initial="hidden"
-              animate={(phase === 'logos-split' || phase === 'content') ? 'visible' : 'exit'}
-              exit="exit"
-            >
-              {homeTeam.scorers.map((scorer, i) => (
-                <div 
-                  key={i} 
-                  className="text-lg font-bold leading-snug tracking-wide whitespace-nowrap text-right w-full"
-                  style={{ color: getColor('scorers-box') || '#ffffff'}}
-                >
-                  {scorer}
-                </div>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {(showScorers === 'home' || showScorers === 'both') && homeTeam.scorers && homeTeam.scorers.length > 0 && (
+          <div
+            className={`absolute bottom-full z-0 flex flex-col justify-center items-end shadow-sm min-h-[40px] left-28 right-[calc(50%+100px)] px-4 py-2 overflow-hidden ${
+              phase === 'logos-split' || phase === 'content' ? 'anim-lt-top-in' : 
+              phase === 'scorers-out' ? 'anim-lt-top-out' : 
+              (phase === 'timer-out' || phase === 'logos-merge') ? 'opacity-0' : 'opacity-0'
+            }`}
+            style={Object.keys(getStyle('scorers-box')).length > 0 ? getStyle('scorers-box') : { backgroundColor: '#6D6E71' }}
+          >
+            {homeTeam.scorers.map((scorer, i) => (
+              <div 
+                key={i} 
+                className="text-lg font-bold leading-snug tracking-wide whitespace-nowrap text-right w-full"
+                style={{ color: getColor('scorers-box') || '#ffffff'}}
+              >
+                {scorer}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Away Scorers - Attached to top of L3 (from team name area to logo box) */}
-        <AnimatePresence initial={false} mode="wait">
-          {(showScorers === 'away' || showScorers === 'both') && awayTeam.scorers && awayTeam.scorers.length > 0 && (phase === 'logos-split' || phase === 'content' || phase === 'scorers-out') && (
-            <motion.div
-              key="away-scorers"
-              className="absolute bottom-full z-0 flex flex-col justify-center items-start shadow-sm min-h-[40px] left-[calc(50%+100px)] right-28 px-4 py-2 overflow-visible"
-              style={Object.keys(getStyle('scorers-box')).length > 0 ? getStyle('scorers-box') : { backgroundColor: '#6D6E71' }}
-              variants={scorersVariants}
-              initial="hidden"
-              animate={(phase === 'logos-split' || phase === 'content') ? 'visible' : 'exit'}
-              exit="exit"
-            >
-              {awayTeam.scorers.map((scorer, i) => (
-                <div 
-                  key={i} 
-                  className="text-lg font-bold leading-snug tracking-wide whitespace-nowrap text-left w-full"
-                  style={{ color: getColor('scorers-box') || '#ffffff'}}
-                >
-                  {scorer}
-                </div>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {(showScorers === 'away' || showScorers === 'both') && awayTeam.scorers && awayTeam.scorers.length > 0 && (
+          <div
+            className={`absolute bottom-full z-0 flex flex-col justify-center items-start shadow-sm min-h-[40px] left-[calc(50%+100px)] right-28 px-4 py-2 overflow-hidden ${
+              phase === 'logos-split' || phase === 'content' ? 'anim-lt-top-in' : 
+              phase === 'scorers-out' ? 'anim-lt-top-out' : 
+              (phase === 'timer-out' || phase === 'logos-merge') ? 'opacity-0' : 'opacity-0'
+            }`}
+            style={Object.keys(getStyle('scorers-box')).length > 0 ? getStyle('scorers-box') : { backgroundColor: '#6D6E71' }}
+          >
+            {awayTeam.scorers.map((scorer, i) => (
+              <div 
+                key={i} 
+                className="text-lg font-bold leading-snug tracking-wide whitespace-nowrap text-left w-full"
+                style={{ color: getColor('scorers-box') || '#ffffff'}}
+              >
+                {scorer}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Main Bar */}
-        <div className="flex w-full h-20 z-10 overflow-visible">
+        <div className="flex w-full h-20 z-10">
           {/* Left Logo Box - always uses team color directly, full height */}
-          <motion.div
-            className="w-28 flex items-center justify-center relative shadow-[inset_-4px_0_10px_rgba(0,0,0,0.1)] z-20 overflow-visible"
+          <div
+            className={`w-28 flex items-center justify-center relative shadow-[inset_-4px_0_10px_rgba(0,0,0,0.1)] z-20 overflow-hidden ${
+              phase === 'logos-split' ? 'anim-logo-split-left' : 
+              phase === 'content' || phase === 'scorers-out' || phase === 'timer-out' ? '' : 
+              phase === 'logos-merge' ? 'anim-logo-merge-left' : 'opacity-0'
+            }`}
             style={{ backgroundColor: homeTeam.color }}
-            variants={logoSplitLeftVariants}
-            initial={false}
-            animate={phase === 'logos-merge' ? 'merge' : (isLogosActive ? 'split' : 'hidden')}
           >
             {homeTeam.logo && (
               <img src={homeTeam.logo} alt="Home" className="h-16 w-16 object-contain drop-shadow-md relative z-10" />
             )}
-          </motion.div>
+          </div>
 
           {/* Center Section - Team Names and Scores */}
-          <div className="flex flex-1 h-full relative z-10 overflow-hidden">
-            <motion.div 
-              className="flex h-full w-full relative z-20 overflow-visible"
-              style={Object.keys(getStyle('center-bar')).length > 0 ? getStyle('center-bar') : { backgroundColor: '#ffffff' }}
-              variants={centerBarVariants}
-              initial="hidden"
-              animate={(phase === 'logos-split' || phase === 'content') ? 'visible' : 'hidden'}
-            >
+          <div 
+            className={`flex flex-1 h-full relative z-20 ${
+              phase === 'logos-split' ? 'anim-lt-center-in' : 
+              phase === 'content' || phase === 'scorers-out' || phase === 'timer-out' ? '' : 
+              phase === 'logos-merge' ? 'anim-lt-center-out' : 
+              ''
+            }`}
+            style={{
+              ...(Object.keys(getStyle('center-bar')).length > 0 ? getStyle('center-bar') : { backgroundColor: '#ffffff' }),
+              clipPath: (phase !== 'logos-split' && phase !== 'content' && phase !== 'scorers-out' && phase !== 'timer-out' && phase !== 'logos-merge') ? 'inset(0 50% 0 50%)' : undefined
+            }}
+          >
             {/* Home Name */}
             <div className="flex-1 flex items-center justify-center">
               <span 
@@ -521,10 +415,39 @@ export default function MatchStatsLowerThird({
               </span>
             </div>
 
-            {/* Score Block */}
-            <div className="relative flex h-full gap-1 overflow-visible">
+            {/* Score Block with Timer Box above */}
+            <div className="relative flex h-full gap-1">
+              {/* Timer Box - positioned above score boxes, z-index lower so it appears from behind */}
+              {timer && (
+                <div 
+                  className={`absolute -top-10 left-0 right-0 h-10 flex items-center justify-center overflow-hidden -z-10 ${
+                    phase === 'content' ? 'anim-timer-box-in' : 
+                    phase === 'timer-out' ? 'anim-timer-box-out' : 
+                    'opacity-0'
+                  }`}
+                  style={Object.keys(getStyle('timer-box')).length > 0 ? getStyle('timer-box') : { backgroundColor: '#292a2bff' }}
+                >
+                  <span 
+                    className="font-sans font-bold text-2xl tracking-wider"
+                    style={{ color: getColor('timer-box') || '#ffffff' }}
+                  >
+                    {timer.isRunning ? (
+                      // Show running timer
+                      `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`
+                    ) : (
+                      // Show period text when paused/stopped
+                      timer.period === 'ht' ? 'HALF TIME' :
+                      timer.period === 'ft' ? 'FULL TIME' :
+                      timer.period === 'pre' ? 'PRE MATCH' :
+                      timer.period === 'et1' ? 'EXTRA TIME' :
+                      timer.period === 'et2' ? 'EXTRA TIME' :
+                      `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`
+                    )}
+                  </span>
+                </div>
+              )}
               <div 
-                className="w-24 flex items-center justify-center relative z-10"
+                className="w-24 flex items-center justify-center"
                 style={Object.keys(getStyle('score-box')).length > 0 ? getStyle('score-box') : { backgroundColor: '#E6E7E8' }}
               >
                 <span 
@@ -533,7 +456,7 @@ export default function MatchStatsLowerThird({
                 >{homeTeam.score}</span>
               </div>
               <div 
-                className="w-24 flex items-center justify-center relative z-10"
+                className="w-24 flex items-center justify-center"
                 style={Object.keys(getStyle('score-box')).length > 0 ? getStyle('score-box') : { backgroundColor: '#E6E7E8' }}
               >
                 <span 
@@ -552,21 +475,21 @@ export default function MatchStatsLowerThird({
                 {awayTeam.name}
               </span>
             </div>
-            </motion.div>
           </div>
 
           {/* Right Logo Box - always uses team color directly, full height */}
-          <motion.div
-            className="w-28 flex items-center justify-center relative shadow-[inset_4px_0_10px_rgba(0,0,0,0.1)] z-20 overflow-visible"
+          <div
+            className={`w-28 flex items-center justify-center relative shadow-[inset_4px_0_10px_rgba(0,0,0,0.1)] z-20 overflow-hidden ${
+              phase === 'logos-split' ? 'anim-logo-split-right' : 
+              phase === 'content' || phase === 'scorers-out' || phase === 'timer-out' ? '' : 
+              phase === 'logos-merge' ? 'anim-logo-merge-right' : 'opacity-0'
+            }`}
             style={{ backgroundColor: awayTeam.color }}
-            variants={logoSplitRightVariants}
-            initial={false}
-            animate={phase === 'logos-merge' ? 'merge' : (isLogosActive ? 'split' : 'hidden')}
           >
             {awayTeam.logo && (
               <img src={awayTeam.logo} alt="Away" className="h-16 w-16 object-contain drop-shadow-md relative z-10" />
             )}
-          </motion.div>
+          </div>
         </div>
       </div>
     </div>
