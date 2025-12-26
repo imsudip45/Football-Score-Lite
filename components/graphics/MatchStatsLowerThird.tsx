@@ -225,6 +225,11 @@ export default function MatchStatsLowerThird({
           opacity: 0;
         }
         
+        .timer-box-visible {
+          transform: translateY(0);
+          opacity: 1;
+        }
+        
         @keyframes timerBoxIn {
           0%   { transform: translateY(60px); opacity: 0; }
           100% { transform: translateY(0);    opacity: 1; }
@@ -430,10 +435,11 @@ export default function MatchStatsLowerThird({
               {timer && (
                 <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-49 overflow-visible pointer-events-none" style={{ height: '80px' }}>
                   <div 
-                    className={`h-10 flex items-center justify-center timer-box ${
-                      phase === 'logos-split' ? 'anim-timer-box-in' :
-                      phase === 'timer-out' ? 'anim-timer-box-out' :
-                      ''
+                    className={`h-10 flex items-center justify-center ${
+                      phase === 'logos-split' ? 'timer-box anim-timer-box-in' :
+                      phase === 'content' ? 'timer-box-visible' :
+                      phase === 'timer-out' ? 'timer-box-visible anim-timer-box-out' :
+                      'timer-box'
                     }`}
                     style={{
                       ...(Object.keys(getStyle('timer-box')).length > 0 ? getStyle('timer-box') : { backgroundColor: '#292a2bff' }),
