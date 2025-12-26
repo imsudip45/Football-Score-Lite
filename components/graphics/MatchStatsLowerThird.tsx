@@ -219,28 +219,25 @@ export default function MatchStatsLowerThird({
         .anim-lt-top-in { animation: ltTopIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards 0s; transform: translateY(100%); opacity: 0; }
         .anim-lt-top-out { animation: ltTopOut 0.25s cubic-bezier(0.7, 0, 0.84, 0) forwards 0s; }
         
-        /* Timer box animation - smooth ease with intermediate steps */
+        /* Timer box - initial hidden state and animations */
+        .timer-box {
+          transform: translateY(60px);
+          opacity: 0;
+        }
+        
         @keyframes timerBoxIn {
           0%   { transform: translateY(60px); opacity: 0; }
-          30%  { transform: translateY(40px); opacity: 0.3; }
-          60%  { transform: translateY(15px); opacity: 0.7; }
           100% { transform: translateY(0);    opacity: 1; }
         }
         @keyframes timerBoxOut {
           0%   { transform: translateY(0);    opacity: 1; }
-          40%  { transform: translateY(15px); opacity: 0.7; }
-          70%  { transform: translateY(40px); opacity: 0.3; }
           100% { transform: translateY(60px); opacity: 0; }
         }
         .anim-timer-box-in { 
-          animation: timerBoxIn 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; 
-          will-change: transform, opacity;
-          backface-visibility: hidden;
+          animation: timerBoxIn 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; 
         }
         .anim-timer-box-out { 
-          animation: timerBoxOut 0.8s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards; 
-          will-change: transform, opacity;
-          backface-visibility: hidden;
+          animation: timerBoxOut 0.6s cubic-bezier(0.55, 0.085, 0.68, 0.53) forwards; 
         }
         
         /* Dynamic pattern animation keyframes */
@@ -431,10 +428,12 @@ export default function MatchStatsLowerThird({
             <div className="relative flex h-full gap-1 overflow-visible">
               {/* Timer Box - centered above the two score boxes, clean slide up/down */}
               {timer && (
-                <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-48 h-20 overflow-visible" style={{ pointerEvents: 'none' }}>
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-49 h-20 overflow-visible pointer-events-none">
                   <div 
-                    className={`h-10 flex items-center justify-center ${
-                      phase === 'timer-out' ? 'anim-timer-box-out' : 'anim-timer-box-in'
+                    className={`h-10 flex items-center justify-center timer-box ${
+                      phase === 'logos-split' ? 'anim-timer-box-in' :
+                      phase === 'timer-out' ? 'anim-timer-box-out' :
+                      ''
                     }`}
                     style={{
                       ...(Object.keys(getStyle('timer-box')).length > 0 ? getStyle('timer-box') : { backgroundColor: '#292a2bff' }),
