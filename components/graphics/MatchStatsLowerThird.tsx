@@ -433,16 +433,12 @@ export default function MatchStatsLowerThird({
               {/* Timer Box - centered above the two score boxes, Framer Motion animation */}
               <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-49 overflow-visible pointer-events-none" style={{ height: '80px' }}>
                 <AnimatePresence>
-                  {timer && phase !== 'league' && phase !== 'league-out' && phase !== 'logos-center' && (
+                  {timer && (phase === 'logos-split' || phase === 'content') && (
                     <motion.div
                       key="timer-box"
                       variants={timerVariants}
                       initial="hidden"
-                      animate={
-                        phase === 'logos-split' || phase === 'content'
-                          ? 'visible'
-                          : 'hidden'
-                      }
+                      animate="visible"
                       exit="exit"
                       className="h-10 flex items-center justify-center"
                       style={{
