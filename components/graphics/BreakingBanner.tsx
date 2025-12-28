@@ -43,7 +43,7 @@ export default function BreakingBanner({ animate, text, label = 'BREAKING' }: Br
           <span 
             className="font-bold text-lg tracking-widest uppercase"
             style={{ 
-              fontFamily: '"Oswald", "Arial Narrow", sans-serif',
+              fontFamily: 'var(--font-oswald), "Arial Narrow", sans-serif',
               animation: isIn ? 'pulse 2s infinite' : 'none',
               color: getColor('label-box') || '#ffffff'
             }}
@@ -57,7 +57,7 @@ export default function BreakingBanner({ animate, text, label = 'BREAKING' }: Br
           <p 
             className="text-xl font-semibold whitespace-nowrap"
             style={{ 
-              fontFamily: '"Oswald", "Arial Narrow", sans-serif',
+              fontFamily: 'var(--font-oswald), "Arial Narrow", sans-serif',
               animation: isIn ? 'scroll-text 15s linear infinite' : 'none',
               color: getColor('text') || '#ffffff'
             }}

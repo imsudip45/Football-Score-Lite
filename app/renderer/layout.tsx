@@ -13,7 +13,7 @@ export default function RendererLayout({
         padding: 0, 
         overflow: 'hidden',
         background: 'transparent',
-        fontFamily: '"Oswald", "Arial Narrow", sans-serif'
+        fontFamily: 'var(--font-oswald), "Arial Narrow", sans-serif'
       }}
     >
       {children}

@@ -36,7 +36,23 @@ import {
 } from "@/lib/graphics-customization-store"
 import { useAppStore } from "@/lib/store"
 
-type GraphicType = 'scoreBug' | 'lowerThird' | 'goalHome' | 'goalAway' | 'cardHome' | 'cardAway' | 'substitutionHome' | 'substitutionAway' | 'nameplateHome' | 'nameplateAway' | 'vsGraphic' | 'lineup' | 'breakingBanner' | 'matchStats' | 'matchOfficials'
+type GraphicType =
+  | 'scoreBug'
+  | 'lowerThird'
+  | 'goalHome'
+  | 'goalAway'
+  | 'cardHome'
+  | 'cardAway'
+  | 'substitutionHome'
+  | 'substitutionAway'
+  | 'nameplateHome'
+  | 'nameplateAway'
+  | 'vsGraphic'
+  | 'lineup'
+  | 'breakingBanner'
+  | 'matchStats'
+  | 'matchStatsFullScreen'
+  | 'matchOfficials'
 
 const graphicsList: { id: GraphicType; name: string; description: string }[] = [
   { id: 'scoreBug', name: 'Score Bug', description: 'Live match score display' },
@@ -52,7 +68,8 @@ const graphicsList: { id: GraphicType; name: string; description: string }[] = [
   { id: 'vsGraphic', name: 'VS Graphic', description: 'Pre-match/Half-time/Full-time screen' },
   { id: 'lineup', name: 'Starting Lineup', description: 'Team formation display' },
   { id: 'breakingBanner', name: 'Breaking Banner', description: 'Breaking news ticker' },
-  { id: 'matchStats', name: 'Match Stats', description: 'Match stats lower third display' },
+  { id: 'matchStats', name: 'Lower Third Graphics', description: 'Lower third graphics (match stats lower third)' },
+  { id: 'matchStatsFullScreen', name: 'Match Stats (Fullscreen)', description: 'Fullscreen match stats screen' },
   { id: 'matchOfficials', name: 'Match Officials', description: 'Match officials display' },
 ]
 
@@ -884,6 +901,7 @@ export function GraphicsCustomization() {
         lineup: store.lineup,
         breakingBanner: store.breakingBanner,
         matchStats: store.matchStats,
+        matchStatsFullScreen: (store as any).matchStatsFullScreen,
         matchOfficials: store.matchOfficials,
       }
     }
@@ -918,7 +936,7 @@ export function GraphicsCustomization() {
         }
         
         // Import each graphic
-        const graphicKeys: GraphicType[] = ['scoreBug', 'lowerThird', 'goalHome', 'goalAway', 'cardHome', 'cardAway', 'substitutionHome', 'substitutionAway', 'nameplateHome', 'nameplateAway', 'vsGraphic', 'lineup', 'breakingBanner', 'matchStats', 'matchOfficials']
+        const graphicKeys: GraphicType[] = ['scoreBug', 'lowerThird', 'goalHome', 'goalAway', 'cardHome', 'cardAway', 'substitutionHome', 'substitutionAway', 'nameplateHome', 'nameplateAway', 'vsGraphic', 'lineup', 'breakingBanner', 'matchStats', 'matchStatsFullScreen', 'matchOfficials']
         graphicKeys.forEach((key) => {
           if (data.graphics[key]) {
             const graphic = data.graphics[key]

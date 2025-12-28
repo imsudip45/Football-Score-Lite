@@ -10,6 +10,7 @@ import LowerThird from '@/components/graphics/LowerThird';
 import MatchStatsLowerThird from '@/components/graphics/MatchStatsLowerThird';
 import BreakingBanner from '@/components/graphics/BreakingBanner';
 import MatchOfficials from '@/components/graphics/MatchOfficials';
+import MatchStatsFullScreen from '@/components/graphics/MatchStatsFullScreen';
 import { useGraphicsCustomizationSync } from '@/lib/graphics-customization-store';
 
 const WS_URL = 'ws://localhost:8080';
@@ -126,6 +127,20 @@ interface GraphicsState {
     showScorers?: 'home' | 'away' | 'none';
     timer?: { minutes: number; seconds: number; isRunning: boolean; period: string };
   };
+  matchStatsFullScreen: {
+    visible: boolean;
+    homeTeam: { name: string; logo?: string; color: string; secondaryColor?: string };
+    awayTeam: { name: string; logo?: string; color: string; secondaryColor?: string };
+    stats: {
+      shots: { home: number; away: number };
+      shotsOnTarget: { home: number; away: number };
+      fouls: { home: number; away: number };
+      yellowCards: { home: number; away: number };
+      redCards: { home: number; away: number };
+      offsides: { home: number; away: number };
+      corners: { home: number; away: number };
+    };
+  };
   matchOfficials: {
     visible: boolean;
     officials: { role: string; name: string }[];
@@ -169,6 +184,20 @@ const defaultState: GraphicsState = {
     matchDay: 'MATCH DAY',
     showScorers: 'none'
   },
+  matchStatsFullScreen: {
+    visible: false,
+    homeTeam: { name: 'Home', color: '#A50044', secondaryColor: '#A50044', logo: '' },
+    awayTeam: { name: 'Away', color: '#00529F', secondaryColor: '#00529F', logo: '' },
+    stats: {
+      shots: { home: 0, away: 0 },
+      shotsOnTarget: { home: 0, away: 0 },
+      fouls: { home: 0, away: 0 },
+      yellowCards: { home: 0, away: 0 },
+      redCards: { home: 0, away: 0 },
+      offsides: { home: 0, away: 0 },
+      corners: { home: 0, away: 0 },
+    },
+  },
   matchOfficials: {
     visible: false,
     officials: [],
@@ -200,6 +229,7 @@ export default function RendererPage() {
     nameplate: 'hidden',
     lineup: 'hidden',
     matchStatsLowerThird: 'hidden',
+    matchStatsFullScreen: 'hidden',
     matchOfficials: 'hidden',
   });
   const [prevVisible, setPrevVisible] = useState<Record<string, boolean>>({
@@ -214,6 +244,7 @@ export default function RendererPage() {
     nameplate: false,
     lineup: false,
     matchStatsLowerThird: false,
+    matchStatsFullScreen: false,
     matchOfficials: false,
   });
   
@@ -230,12 +261,13 @@ export default function RendererPage() {
     nameplate: null,
     lineup: null,
     matchStatsLowerThird: null,
+    matchStatsFullScreen: null,
     matchOfficials: null,
   });
 
   // Handle visibility changes with animation
   const updateAnimations = useCallback((newState: GraphicsState) => {
-    const graphicKeys = ['scoreBug', 'lowerThird', 'ticker', 'breakingBanner', 'goal', 'card', 'substitution', 'vsGraphic', 'nameplate', 'lineup', 'matchStatsLowerThird', 'matchOfficials'] as const;
+    const graphicKeys = ['scoreBug', 'lowerThird', 'ticker', 'breakingBanner', 'goal', 'card', 'substitution', 'vsGraphic', 'nameplate', 'lineup', 'matchStatsLowerThird', 'matchStatsFullScreen', 'matchOfficials'] as const;
     
     setPrevVisible(prev => {
       graphicKeys.forEach(key => {
@@ -261,6 +293,7 @@ export default function RendererPage() {
               case 'matchStatsLowerThird': return 4000; // Complex multi-phase animation (timer-out + merge + league exit)
               case 'vsGraphic': return 1500; // Slide out + container fade
               case 'lineup': return 1500; // Multiple elements + container fade
+              case 'matchStatsFullScreen': return 500; // Fade-only
               case 'matchOfficials': return 1200; // Sidebar + content wipe out
               default: return 1000; // Standard graphics
             }
@@ -385,7 +418,7 @@ export default function RendererPage() {
         width: '1920px', 
         height: '1080px', 
         background: 'transparent',
-        fontFamily: '"Oswald", "Arial Narrow", sans-serif',
+        fontFamily: 'var(--font-oswald), "Arial Narrow", sans-serif',
         overflow: 'visible', // Allow graphics to overflow during animations
       }}
     >
@@ -545,6 +578,18 @@ export default function RendererPage() {
             }))}
             subs={state.lineup.subs}
             coach={state.lineup.coach}
+          />
+        </div>
+      )}
+
+      {/* Match Stats - Full Screen */}
+      {shouldRender('matchStatsFullScreen') && (
+        <div className="absolute inset-0 z-30">
+          <MatchStatsFullScreen
+            animate={getAnimateState('matchStatsFullScreen')}
+            homeTeam={state.matchStatsFullScreen.homeTeam}
+            awayTeam={state.matchStatsFullScreen.awayTeam}
+            stats={state.matchStatsFullScreen.stats}
           />
         </div>
       )}

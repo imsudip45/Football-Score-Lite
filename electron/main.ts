@@ -148,9 +148,11 @@ function setupIpcHandlers() {
   // Renderer window management
   ipcMain.handle('renderer:open', (_event, type: string, url?: string) => {
     const appPath = getAppPath()
-    const rendererUrl = url || (isDev 
-      ? `http://localhost:3000/renderers/${type}.html`
-      : `file://${join(appPath, 'out', 'renderers', type)}.html`)
+    // Legacy Pixi renderers were removed; use the unified React renderer route instead.
+    // If a custom URL is provided, keep honoring it for flexibility.
+    const rendererUrl = url || (isDev
+      ? `http://localhost:3000/renderer`
+      : `file://${join(appPath, 'out', 'renderer', 'index.html')}`)
     const window = createRendererWindow(type, rendererUrl)
     return { success: true, id: window.id }
   })

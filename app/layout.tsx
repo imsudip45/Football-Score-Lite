@@ -1,11 +1,18 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Inter, Geist_Mono } from "next/font/google"
+import { Inter, Geist_Mono, Oswald, Bebas_Neue } from "next/font/google"
 import { ThemeProvider } from "@/components/theme-provider"
 import "./globals.css"
 
-const _inter = Inter({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
+const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" })
+const oswald = Oswald({
+  subsets: ["latin"],
+  // Oswald only supports up to 700 (plus "variable") in next/font/google
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-oswald",
+})
+const bebasNeue = Bebas_Neue({ subsets: ["latin"], weight: ["400"], variable: "--font-bebas" })
 
 export const metadata: Metadata = {
   title: "Football Score Lite - Football Graphics Control",
@@ -25,13 +32,12 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet" />
-      </head>
-      <body className="font-sans antialiased overflow-hidden" suppressHydrationWarning>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${inter.variable} ${geistMono.variable} ${oswald.variable} ${bebasNeue.variable}`}
+    >
+      <body className={`${inter.className} font-sans antialiased overflow-hidden`} suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

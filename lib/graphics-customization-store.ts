@@ -198,6 +198,41 @@ const defaultMatchStatsComponents: ComponentStyle[] = [
   { id: 'scorers-box', name: 'Scorers Box', fill: { type: 'solid', color: '#6D6E71' }, textColor: '#ffffff' },
 ]
 
+const defaultMatchStatsFullScreenComponents: ComponentStyle[] = [
+  {
+    id: 'background',
+    name: 'Background',
+    fill: {
+      type: 'gradient',
+      color: '#000000',
+      gradient: {
+        type: 'linear',
+        angle: 180,
+        stops: [
+          { color: 'rgba(0,0,0,0.88)', position: 0 },
+          { color: 'rgba(0,0,0,0.78)', position: 100 },
+        ],
+      },
+    },
+  },
+  {
+    id: 'background-pattern',
+    name: 'Background Pattern',
+    fill: {
+      type: 'pattern',
+      color: 'transparent',
+      pattern: { enabled: true, type: 'maze', color: '#ffffff', opacity: 0.12, size: 90 },
+    },
+  },
+  { id: 'title-text', name: 'Title Text', fill: { type: 'solid', color: '#ffffff' }, textColor: '#ffffff', fontSize: 64, textStyle: { fontWeight: 'extrabold', textTransform: 'uppercase', letterSpacing: 0.08 } },
+  { id: 'card', name: 'Center Card', fill: { type: 'solid', color: '#ffffff' } },
+  { id: 'divider', name: 'Row Dividers', fill: { type: 'solid', color: '#E5E7EB' } },
+  { id: 'stat-label', name: 'Stat Labels', fill: { type: 'solid', color: '#6B7280' }, textColor: '#4B5563', fontSize: 22, textStyle: { fontWeight: 'semibold', textTransform: 'uppercase', letterSpacing: 0.18 } },
+  { id: 'stat-value', name: 'Stat Values', fill: { type: 'solid', color: '#111827' }, textColor: '#111827', fontSize: 54, textStyle: { fontWeight: 'extrabold' } },
+  { id: 'home-panel', name: 'Home Team Panel', fill: { type: 'solid', color: '#A50044', useTeamColor: 'home1' } },
+  { id: 'away-panel', name: 'Away Team Panel', fill: { type: 'solid', color: '#00529F', useTeamColor: 'away1' } },
+]
+
 const defaultMatchOfficialsComponents: ComponentStyle[] = [
   { id: 'sidebar', name: 'Sidebar', fill: { type: 'solid', color: '#F3F4F6' }, textColor: '#EF3E42', fontSize: 30, textStyle: { fontStyle: 'italic' } },
   { id: 'header', name: 'Header', fill: { type: 'solid', color: '#EF3E42' }, textColor: '#ffffff', fontSize: 24, textStyle: { textTransform: 'uppercase', letterSpacing: 0.05 } },
@@ -222,6 +257,7 @@ interface GraphicsCustomizationState {
   lineup: GraphicCustomization
   breakingBanner: GraphicCustomization
   matchStats: GraphicCustomization
+  matchStatsFullScreen: GraphicCustomization
   matchOfficials: GraphicCustomization
 
   // Actions
@@ -234,7 +270,23 @@ interface GraphicsCustomizationState {
   resetAll: () => void
 }
 
-type GraphicKey = 'scoreBug' | 'lowerThird' | 'goalHome' | 'goalAway' | 'cardHome' | 'cardAway' | 'substitutionHome' | 'substitutionAway' | 'nameplateHome' | 'nameplateAway' | 'vsGraphic' | 'lineup' | 'breakingBanner' | 'matchStats' | 'matchOfficials'
+type GraphicKey =
+  | 'scoreBug'
+  | 'lowerThird'
+  | 'goalHome'
+  | 'goalAway'
+  | 'cardHome'
+  | 'cardAway'
+  | 'substitutionHome'
+  | 'substitutionAway'
+  | 'nameplateHome'
+  | 'nameplateAway'
+  | 'vsGraphic'
+  | 'lineup'
+  | 'breakingBanner'
+  | 'matchStats'
+  | 'matchStatsFullScreen'
+  | 'matchOfficials'
 
 const defaultCustomizations: Record<GraphicKey, GraphicCustomization> = {
   scoreBug: {
@@ -335,6 +387,13 @@ const defaultCustomizations: Record<GraphicKey, GraphicCustomization> = {
     enabled: true,
     components: defaultMatchStatsComponents,
   },
+  matchStatsFullScreen: {
+    position: { top: 0, left: 0 },
+    scale: 1,
+    opacity: 1,
+    enabled: true,
+    components: defaultMatchStatsFullScreenComponents,
+  },
   matchOfficials: {
     position: { top: 0, left: 64, bottom: 40 },
     scale: 1,
@@ -402,17 +461,22 @@ export const useGraphicsCustomizationStore = create<GraphicsCustomizationState>(
     }),
     {
       name: "localmatch-graphics-customization",
-      version: 22, // Increment to force reset - league box white background
+      version: 23, // Increment to force reset - add matchStatsFullScreen customization
       migrate: (persistedState: unknown, version: number) => {
         // Always reset if version is old or if components are missing
-        if (version < 22) {
-          // Version 22: League box now has white background instead of red
+        if (version < 23) {
+          // Version 23: add matchStatsFullScreen customization + keep prior defaults aligned
           return defaultCustomizations
         }
         // Check if persisted state has components properly
         const state = persistedState as Record<string, unknown>
         const scoreBug = state?.scoreBug as GraphicCustomization | undefined
         if (!scoreBug?.components || scoreBug.components.length === 0) {
+          return defaultCustomizations
+        }
+        // If a newer graphic key is missing (e.g., after update), reset to defaults
+        const msfs = state?.matchStatsFullScreen as GraphicCustomization | undefined
+        if (!msfs?.components || msfs.components.length === 0) {
           return defaultCustomizations
         }
         return persistedState as GraphicsCustomizationState

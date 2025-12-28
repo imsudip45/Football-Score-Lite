@@ -36,6 +36,14 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
   leagueLogo = '',
   leagueColor = ''
 }) => {
+  // In dev (http://) we can load public assets from `/...`.
+  // In Electron production (file://.../out/renderer/index.html) absolute `/...` resolves to the filesystem root,
+  // so we must use a relative path up to `out/`.
+  const snasmFontUrl =
+    typeof window !== 'undefined' && window.location.protocol === 'file:'
+      ? '../Snasm-W05-Regular.ttf'
+      : '/Snasm-W05-Regular.ttf';
+
   // Get customization settings from store (synced across tabs via localStorage)
   const customization = useGraphicsCustomizationStore(state => state.scoreBug);
 
@@ -139,7 +147,7 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
         /* Custom font for tournament name */
         @font-face {
           font-family: 'Snasm';
-          src: url('/Snasm-W05-Regular.ttf') format('truetype');
+          src: url('${snasmFontUrl}') format('truetype');
           font-weight: normal;
           font-style: normal;
         }

@@ -156,6 +156,7 @@ export function LiveControl() {
   // Extract graphics state with safe defaults
   const scoreBugVisible = safeGetVisibility('scoreBugVisible')
   const matchStatsLowerThirdVisible = safeGetVisibility('matchStatsLowerThirdVisible')
+  const matchStatsFullScreenVisible = safeGetVisibility('matchStatsFullScreenVisible')
   const vsGraphicVisible = safeGetVisibility('vsGraphicVisible')
   const lineupVisible = safeGetVisibility('lineupVisible')
   const lineupTeam = (graphicsState as unknown as Record<string, unknown>).lineupTeam as 'home' | 'away' | null
@@ -164,6 +165,7 @@ export function LiveControl() {
   const { 
     toggleScoreBug, 
     toggleMatchStatsLowerThird, 
+    toggleMatchStatsFullScreen,
     toggleVSGraphic,
     toggleLineup,
     toggleMatchOfficials,
@@ -397,7 +399,7 @@ export function LiveControl() {
   // When showing fullscreen graphics, ALL other graphics must be hidden first
   const hideAllGraphicsForFullscreen = useCallback(() => {
     const anyVisible = scoreBugVisible || goalVisible || cardVisible || substitutionVisible || 
-                       nameplateVisible || matchStatsLowerThirdVisible || vsGraphicVisible || 
+                       nameplateVisible || matchStatsLowerThirdVisible || matchStatsFullScreenVisible || vsGraphicVisible || 
                        lineupVisible || matchOfficialsVisible
     
     // Hide everything
@@ -407,15 +409,16 @@ export function LiveControl() {
     if (substitutionVisible) toggleSubstitution(false)
     if (nameplateVisible) toggleNameplate(false)
     if (matchStatsLowerThirdVisible) toggleMatchStatsLowerThird(false)
+    if (matchStatsFullScreenVisible) toggleMatchStatsFullScreen(false)
     if (vsGraphicVisible) toggleVSGraphic(false)
     if (lineupVisible) toggleLineup(false)
     if (matchOfficialsVisible) toggleMatchOfficials(false)
     
     return anyVisible
   }, [scoreBugVisible, goalVisible, cardVisible, substitutionVisible, nameplateVisible, 
-      matchStatsLowerThirdVisible, vsGraphicVisible, lineupVisible, matchOfficialsVisible,
+      matchStatsLowerThirdVisible, matchStatsFullScreenVisible, vsGraphicVisible, lineupVisible, matchOfficialsVisible,
       toggleScoreBug, toggleGoal, toggleCard, toggleSubstitution, toggleNameplate, 
-      toggleMatchStatsLowerThird, toggleVSGraphic, toggleLineup, toggleMatchOfficials])
+      toggleMatchStatsLowerThird, toggleMatchStatsFullScreen, toggleVSGraphic, toggleLineup, toggleMatchOfficials])
 
   // Hide event graphics only (for mutual exclusion within Events group)
   const hideEventGraphics = useCallback(() => {
@@ -505,6 +508,20 @@ export function LiveControl() {
       toggleVSGraphic(false)
     }
   }, [hideAllGraphicsForFullscreen, toggleVSGraphic])
+
+  // Show Match Stats Fullscreen with proper fullscreen handling
+  const showMatchStatsFullScreen = useCallback((show: boolean) => {
+    if (show) {
+      const hadVisibleGraphics = hideAllGraphicsForFullscreen()
+      const delay = hadVisibleGraphics ? 1200 : 100
+      setTimeout(() => {
+        toggleMatchStatsFullScreen(true)
+        toast.success("Match Stats (Fullscreen) shown")
+      }, delay)
+    } else {
+      toggleMatchStatsFullScreen(false)
+    }
+  }, [hideAllGraphicsForFullscreen, toggleMatchStatsFullScreen])
 
   // Show Match Officials with proper fullscreen handling
   const showMatchOfficials = useCallback((show: boolean) => {
@@ -1810,7 +1827,7 @@ export function LiveControl() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pb-3 pt-0 px-3 space-y-2">
-              {/* Main Graphics - Score Bug & Match Stats */}
+              {/* Main Graphics - Score Bug & Lower Third */}
               <div className="rounded-xl bg-secondary/50 divide-y divide-border/30">
                 <div className="flex items-center justify-between px-4 py-2">
                   <div className="flex items-center gap-3">
@@ -1829,7 +1846,7 @@ export function LiveControl() {
                 <div className="flex items-center justify-between px-4 py-2">
                   <div className="flex items-center gap-3">
                     <LayoutGrid className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-base font-medium">Match Stats</span>
+                    <span className="text-base font-medium">Lower Third Graphics</span>
                   </div>
                   <Button
                     size="lg"
@@ -1967,6 +1984,20 @@ export function LiveControl() {
                     onClick={() => vsGraphicVisible ? toggleVSGraphic(false) : showVSGraphic(true)}
                   >
                     {vsGraphicVisible ? 'ON' : 'OFF'}
+                  </Button>
+                </div>
+                <div className="flex items-center justify-between px-4 py-2">
+                  <div className="flex items-center gap-3">
+                    <LayoutGrid className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-base font-medium">Match Stats (FS)</span>
+                  </div>
+                  <Button
+                    size="lg"
+                    disabled={!wsConnected}
+                    className={`h-10 px-5 text-sm font-semibold ${matchStatsFullScreenVisible ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
+                    onClick={() => matchStatsFullScreenVisible ? toggleMatchStatsFullScreen(false) : showMatchStatsFullScreen(true)}
+                  >
+                    {matchStatsFullScreenVisible ? 'ON' : 'OFF'}
                   </Button>
                 </div>
                 <div className="flex items-center justify-between px-4 py-2">

@@ -88,8 +88,8 @@ export function FootballGraphicsControl() {
   } = useAppStore()
 
   const {
-    scoreBugVisible, goalVisible, cardVisible, substitutionVisible, vsGraphicVisible, nameplateVisible, lineupVisible, matchStatsLowerThirdVisible,
-    toggleScoreBug, toggleGoal, toggleCard, toggleSubstitution, toggleVSGraphic, toggleNameplate, toggleLineup, toggleMatchStatsLowerThird,
+    scoreBugVisible, goalVisible, cardVisible, substitutionVisible, vsGraphicVisible, nameplateVisible, lineupVisible, matchStatsLowerThirdVisible, matchStatsFullScreenVisible,
+    toggleScoreBug, toggleGoal, toggleCard, toggleSubstitution, toggleVSGraphic, toggleNameplate, toggleLineup, toggleMatchStatsLowerThird, toggleMatchStatsFullScreen,
   } = useGraphicsStore()
 
   const [mounted, setMounted] = useState(false)
@@ -202,6 +202,7 @@ export function FootballGraphicsControl() {
     toggleNameplate(false)
     toggleLineup(false)
     toggleMatchStatsLowerThird(false)
+    toggleMatchStatsFullScreen(false)
     toast.info("All graphics off")
   }
 
@@ -226,7 +227,7 @@ export function FootballGraphicsControl() {
   // Hide ALL graphics before showing fullscreen - returns true if any were visible
   const hideAllGraphicsForFullscreen = useCallback(() => {
     const anyVisible = scoreBugVisible || goalVisible || cardVisible || substitutionVisible || 
-                       nameplateVisible || matchStatsLowerThirdVisible || vsGraphicVisible || lineupVisible
+                       nameplateVisible || matchStatsLowerThirdVisible || matchStatsFullScreenVisible || vsGraphicVisible || lineupVisible
     
     // Hide everything
     toggleScoreBug(false)
@@ -235,14 +236,15 @@ export function FootballGraphicsControl() {
     toggleSubstitution(false)
     toggleNameplate(false)
     toggleMatchStatsLowerThird(false)
+    toggleMatchStatsFullScreen(false)
     toggleVSGraphic(false)
     toggleLineup(false)
     
     return anyVisible
   }, [scoreBugVisible, goalVisible, cardVisible, substitutionVisible, nameplateVisible, 
-      matchStatsLowerThirdVisible, vsGraphicVisible, lineupVisible,
+      matchStatsLowerThirdVisible, matchStatsFullScreenVisible, vsGraphicVisible, lineupVisible,
       toggleScoreBug, toggleGoal, toggleCard, toggleSubstitution, toggleNameplate, 
-      toggleMatchStatsLowerThird, toggleVSGraphic, toggleLineup])
+      toggleMatchStatsLowerThird, toggleMatchStatsFullScreen, toggleVSGraphic, toggleLineup])
 
   // Get active graphics for each group
   const eventGroupActive = useMemo(() => {
@@ -270,8 +272,9 @@ export function FootballGraphicsControl() {
     const active: string[] = []
     if (vsGraphicVisible) active.push('VS')
     if (lineupVisible) active.push('Lineup')
+    if (matchStatsFullScreenVisible) active.push('Stats')
     return active
-  }, [vsGraphicVisible, lineupVisible])
+  }, [vsGraphicVisible, lineupVisible, matchStatsFullScreenVisible])
 
   // Event Queue - events that need graphics shown
   const eventQueue = useMemo(() => {
@@ -563,12 +566,28 @@ export function FootballGraphicsControl() {
     }, delay)
   }
 
+  const showMatchStatsFullScreen = () => {
+    if (!currentMatch) return
+    const hadVisibleGraphics = hideAllGraphicsForFullscreen()
+    const delay = hadVisibleGraphics ? 1200 : 100
+
+    if (hadVisibleGraphics) {
+      toast.info("Hiding existing graphics...")
+    }
+
+    setTimeout(() => {
+      toggleMatchStatsFullScreen(true)
+      setLastPushedGraphic("Match Stats (Fullscreen)")
+      toast.success("Match Stats shown")
+    }, delay)
+  }
+
   const showMatchStats = () => {
     hideLowerThirdGraphics()
     setTimeout(() => {
       toggleMatchStatsLowerThird(true)
-      setLastPushedGraphic("Match Stats")
-      toast.success("Match Stats shown")
+      setLastPushedGraphic("Lower Third Graphics")
+      toast.success("Lower Third Graphics shown")
     }, 100)
   }
 
@@ -815,12 +834,13 @@ export function FootballGraphicsControl() {
                 {scoreBugVisible && <Badge className="text-[10px] bg-green-500 shadow-sm shadow-green-500/50">Score Bug</Badge>}
                 {vsGraphicVisible && <Badge className="text-[10px] bg-violet-500 shadow-sm shadow-violet-500/50">VS</Badge>}
                 {lineupVisible && <Badge className="text-[10px] bg-indigo-500 shadow-sm shadow-indigo-500/50">Lineup</Badge>}
-                {matchStatsLowerThirdVisible && <Badge className="text-[10px] bg-cyan-500 shadow-sm shadow-cyan-500/50">Stats L3</Badge>}
+                {matchStatsLowerThirdVisible && <Badge className="text-[10px] bg-cyan-500 shadow-sm shadow-cyan-500/50">Lower Third</Badge>}
+                {matchStatsFullScreenVisible && <Badge className="text-[10px] bg-violet-500 shadow-sm shadow-violet-500/50">Stats FS</Badge>}
                 {goalVisible && <Badge className="text-[10px] bg-green-600 shadow-sm shadow-green-600/50 animate-pulse">Goal</Badge>}
                 {cardVisible && <Badge className={`text-[10px] shadow-sm animate-pulse ${cardData?.cardType === 'red' ? 'bg-red-600 shadow-red-600/50' : 'bg-yellow-500 text-black shadow-yellow-500/50'}`}>Card</Badge>}
                 {substitutionVisible && <Badge className="text-[10px] bg-blue-500 shadow-sm shadow-blue-500/50 animate-pulse">Sub</Badge>}
                 {nameplateVisible && <Badge className="text-[10px] bg-purple-500 shadow-sm shadow-purple-500/50">Nameplate</Badge>}
-                {!scoreBugVisible && !vsGraphicVisible && !lineupVisible && !goalVisible && !cardVisible && !substitutionVisible && !nameplateVisible && !matchStatsLowerThirdVisible && (
+                {!scoreBugVisible && !vsGraphicVisible && !lineupVisible && !goalVisible && !cardVisible && !substitutionVisible && !nameplateVisible && !matchStatsLowerThirdVisible && !matchStatsFullScreenVisible && (
                   <span className="text-xs text-muted-foreground italic">All graphics off</span>
                 )}
               </div>
@@ -1190,6 +1210,53 @@ export function FootballGraphicsControl() {
               )}
             </div>
 
+            {/* Match Stats (Fullscreen) */}
+            <div className="border rounded-lg p-3 mb-3 bg-violet-500/5 border-violet-500/20">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium">Match Stats</span>
+                <div className="flex items-center gap-2">
+                  {matchStatsFullScreenVisible && <Badge className="text-[9px] bg-violet-500">LIVE</Badge>}
+                  <Switch
+                    checked={matchStatsFullScreenVisible}
+                    onCheckedChange={(checked) => {
+                      if (checked) showMatchStatsFullScreen()
+                      else toggleMatchStatsFullScreen(false)
+                    }}
+                  />
+                </div>
+              </div>
+              {currentMatch ? (
+                <>
+                  <div className="flex items-center justify-center gap-3 mb-3">
+                    <span className="text-sm font-medium">{currentMatch.homeTeam.shortName}</span>
+                    <span className="text-lg font-bold">vs</span>
+                    <span className="text-sm font-medium">{currentMatch.awayTeam.shortName}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="flex-1 h-7 text-xs bg-violet-600 hover:bg-violet-700"
+                      onClick={showMatchStatsFullScreen}
+                      disabled={matchStatsFullScreenVisible}
+                    >
+                      <Play className="h-3 w-3 mr-1" /> Show
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 h-7 text-xs"
+                      onClick={() => toggleMatchStatsFullScreen(false)}
+                      disabled={!matchStatsFullScreenVisible}
+                    >
+                      <Square className="h-3 w-3 mr-1" /> Hide
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <p className="text-xs text-muted-foreground text-center">No match loaded</p>
+              )}
+            </div>
+
             {/* Lineup */}
             <div className="border rounded-lg p-3 bg-indigo-500/5 border-indigo-500/20">
               <div className="flex items-center justify-between mb-2">
@@ -1237,7 +1304,7 @@ export function FootballGraphicsControl() {
             </div>
           </GraphicsGroupBox>
 
-          {/* Lower Third Graphics Group */}
+            {/* Lower Third Graphics Group */}
           <GraphicsGroupBox 
             title="Lower Third Graphics" 
             borderColor="#06b6d4" 
@@ -1246,7 +1313,7 @@ export function FootballGraphicsControl() {
           >
             <div className="border rounded-lg p-3 bg-cyan-500/5 border-cyan-500/20">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium">Match Stats L3</span>
+                  <span className="text-xs font-medium">Lower Third Graphics</span>
                 <div className="flex items-center gap-2">
                   {matchStatsLowerThirdVisible && <Badge className="text-[9px] bg-cyan-500">LIVE</Badge>}
                   <Switch checked={matchStatsLowerThirdVisible} onCheckedChange={toggleMatchStatsLowerThird} />

@@ -356,10 +356,10 @@ const StartingLineup: React.FC<StartingLineupProps> = ({
           ...(Object.keys(getStyle('title-box')).length > 0 ? getStyle('title-box') : { backgroundColor: '#ffffff' })
         }}
       >
-        <h1 className="text-[80px] leading-[0.8] tracking-tight font-normal relative z-10" style={{ color: teamColor, fontFamily: '"Bebas Neue", sans-serif' }}>
+        <h1 className="text-[80px] leading-[0.8] tracking-tight font-normal relative z-10" style={{ color: teamColor, fontFamily: 'var(--font-bebas), sans-serif' }}>
           {teamName}
         </h1>
-        <h2 className="text-[50px] text-black leading-[0.9] tracking-tight font-normal relative z-10" style={{ fontFamily: '"Bebas Neue", sans-serif' }}>
+        <h2 className="text-[50px] text-black leading-[0.9] tracking-tight font-normal relative z-10" style={{ fontFamily: 'var(--font-bebas), sans-serif' }}>
           STARTING LINEUP
         </h2>
       </div>

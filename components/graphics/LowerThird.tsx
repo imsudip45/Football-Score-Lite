@@ -75,7 +75,7 @@ export default function LowerThird({ animate, title, subtitle, teamColor = '#14b
             <h3 
               className="text-2xl font-bold uppercase tracking-wide"
               style={{ 
-                fontFamily: '"Oswald", "Arial Narrow", sans-serif',
+                fontFamily: 'var(--font-oswald), "Arial Narrow", sans-serif',
                 color: getColor('title-text') || '#ffffff'
               }}
             >
@@ -85,7 +85,7 @@ export default function LowerThird({ animate, title, subtitle, teamColor = '#14b
               <p 
                 className="text-base mt-0.5"
                 style={{ 
-                  fontFamily: '"Oswald", "Arial Narrow", sans-serif',
+                  fontFamily: 'var(--font-oswald), "Arial Narrow", sans-serif',
                   color: getColor('subtitle-text') || 'rgba(255,255,255,0.7)'
                 }}
               >

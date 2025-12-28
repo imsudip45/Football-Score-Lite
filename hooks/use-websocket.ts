@@ -53,6 +53,7 @@ export function useWebSocket() {
     nameplateVisible,
     lineupVisible,
     matchStatsLowerThirdVisible,
+    matchStatsFullScreenVisible,
     matchOfficialsVisible,
     activePreset,
   } = useGraphicsStore()
@@ -442,6 +443,38 @@ export function useWebSocket() {
           period: currentMatch?.period || 'pre',
         },
       },
+      matchStatsFullScreen: {
+        visible: matchStatsFullScreenVisible,
+        homeTeam: {
+          name: homeTeam.name,
+          logo: homeTeam.logo,
+          color: homeTeam.primaryColor,
+          secondaryColor: homeTeam.secondaryColor || homeTeam.primaryColor,
+        },
+        awayTeam: {
+          name: awayTeam.name,
+          logo: awayTeam.logo,
+          color: awayTeam.primaryColor,
+          secondaryColor: awayTeam.secondaryColor || awayTeam.primaryColor,
+        },
+        stats: (() => {
+          const events = currentMatch?.events || []
+          const yellowFor = (team: 'home' | 'away') =>
+            events.filter((e: any) => e.team === team && (e.type === 'yellow' || e.type === 'second-yellow')).length
+          const redFor = (team: 'home' | 'away') =>
+            events.filter((e: any) => e.team === team && (e.type === 'red' || e.type === 'second-yellow')).length
+
+          return {
+            shots: { home: currentMatch?.homeShots || 0, away: currentMatch?.awayShots || 0 },
+            shotsOnTarget: { home: currentMatch?.homeShotsOnTarget || 0, away: currentMatch?.awayShotsOnTarget || 0 },
+            fouls: { home: currentMatch?.homeFouls || 0, away: currentMatch?.awayFouls || 0 },
+            yellowCards: { home: yellowFor('home'), away: yellowFor('away') },
+            redCards: { home: redFor('home'), away: redFor('away') },
+            offsides: { home: currentMatch?.homeOffsides || 0, away: currentMatch?.awayOffsides || 0 },
+            corners: { home: currentMatch?.homeCorners || 0, away: currentMatch?.awayCorners || 0 },
+          }
+        })(),
+      },
       matchOfficials: {
         visible: matchOfficialsVisible,
         // Always send 4 rows (Ref/AR1/AR2/4th). If a role isn't assigned yet, show TBD.
@@ -548,10 +581,12 @@ export function useWebSocket() {
     lineupData,
     lineupVisible,
     matchStatsLowerThirdVisible,
+    matchStatsFullScreenVisible,
     matchOfficialsVisible,
     currentMatch?.officials,
     currentMatch?.competitionLogo,
     currentMatch?.tournamentColor,
+    currentMatch?.updatedAt,
     setLastSyncTime,
     sendMessage,
   ])

@@ -1,12 +1,12 @@
 # Football Score Lite
 
-Professional football graphics control system for local tournaments, built with Electron, React, and PIXI.js.
+Professional football graphics control system for local tournaments, built with Electron, React, and WebSocket-synced graphics.
 
 ## Features
 
 - **Match Management**: Create and manage football matches with teams, lineups, and officials
 - **Live Control**: Real-time score bug, timer, events, and graphics control
-- **Graphics Output**: PIXI.js-powered renderers for Score Bug, Lower Third, Ticker, and Breaking Banner
+- **Graphics Output**: Unified React renderer output for OBS / browser sources
 - **WebSocket Sync**: Real-time synchronization across all renderer windows
 - **Local Persistence**: Save/load matches, teams, and assets locally
 - **Modern UI**: Beautiful dark theme with glassy effects
@@ -53,12 +53,7 @@ Football-Score-Lite/
 │   ├── main.ts        # Main process entry
 │   ├── preload.ts     # Preload script (IPC bridge)
 │   └── server.ts      # WebSocket server
-├── public/
-│   └── renderers/     # PIXI.js renderer pages
-│       ├── scorebug.html/js
-│       ├── lowerthird.html/js
-│       ├── ticker.html/js
-│       └── breaking.html/js
+├── public/            # Static assets
 ├── app/               # Next.js app directory
 ├── components/        # React components
 ├── hooks/            # React hooks (WebSocket, file persistence)
@@ -94,10 +89,7 @@ pnpm dist:linux  # Linux
 ## Renderer URLs
 
 For OBS Browser Sources, use these URLs:
-- Score Bug: `http://localhost:3000/renderers/scorebug.html`
-- Lower Third: `http://localhost:3000/renderers/lowerthird.html`
-- Ticker: `http://localhost:3000/renderers/ticker.html`
-- Breaking Banner: `http://localhost:3000/renderers/breaking.html`
+- Main Renderer Output: `http://localhost:3000/renderer`
 
 ## WebSocket Server
 
