@@ -12,6 +12,7 @@ import BreakingBanner from '@/components/graphics/BreakingBanner';
 import MatchOfficials from '@/components/graphics/MatchOfficials';
 import MatchStatsFullScreen from '@/components/graphics/MatchStatsFullScreen';
 import { useGraphicsCustomizationSync } from '@/lib/graphics-customization-store';
+import { useGraphicsCustomizationStore } from '@/lib/graphics-customization-store';
 
 const WS_URL = 'ws://localhost:8080';
 
@@ -216,6 +217,18 @@ export default function RendererPage() {
     };
   }, []);
 
+  // Apply customization updates received via WebSocket (production-safe: works across file:// origins)
+  const applyCustomizationFromWs = useCallback((incoming: any) => {
+    if (!incoming) return;
+    try {
+      const version = (useGraphicsCustomizationStore as any).persist?.getOptions?.().version ?? 23;
+      localStorage.setItem('localmatch-graphics-customization', JSON.stringify({ state: incoming, version }));
+      (useGraphicsCustomizationStore as any).persist?.rehydrate?.();
+    } catch (e) {
+      console.warn('[Renderer] Failed to apply customization from WS:', e);
+    }
+  }, []);
+
   const [state, setState] = useState<GraphicsState>(defaultState);
   const [animate, setAnimate] = useState<Record<string, 'in' | 'out' | 'hidden'>>({
     scoreBug: 'hidden',
@@ -294,7 +307,10 @@ export default function RendererPage() {
               case 'vsGraphic': return 1500; // Slide out + container fade
               case 'lineup': return 1500; // Multiple elements + container fade
               case 'matchStatsFullScreen': return 500; // Fade-only
-              case 'matchOfficials': return 1200; // Sidebar + content wipe out
+              case 'matchOfficials': return 850; // Sidebar + content wipe out (+ container fade)
+              case 'goal': return 600; // Wipe/slide out + container fade
+              case 'card': return 600; // Wipe/slide out + container fade
+              case 'substitution': return 600; // Wipe/slide out + container fade
               default: return 1000; // Standard graphics
             }
           };
@@ -333,6 +349,9 @@ export default function RendererPage() {
           
           if (msg.type === 'state' && msg.data) {
             console.log('[Renderer] Received state:', Object.keys(msg.data).filter(k => msg.data[k]?.visible));
+            if (msg.data.customization) {
+              applyCustomizationFromWs(msg.data.customization);
+            }
             setState(prev => {
               const newState = { ...prev };
               

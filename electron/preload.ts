@@ -11,6 +11,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     saveDialog: (options: Electron.SaveDialogOptions) => ipcRenderer.invoke('file:save-dialog', options),
   },
 
+  // Assets (binary-safe) stored under userData/assets and served via app-assets://
+  assets: {
+    writeDataUrl: (relPath: string, dataUrl: string) => ipcRenderer.invoke('assets:writeDataUrl', relPath, dataUrl),
+    readBase64: (relPath: string) => ipcRenderer.invoke('assets:readBase64', relPath),
+  },
+
   // Renderer window management
   renderer: {
     open: (type: string, url: string) => ipcRenderer.invoke('renderer:open', type, url),
@@ -34,6 +40,10 @@ declare global {
         load: (path: string) => Promise<{ success: boolean; data?: string; error?: string }>
         select: (options: Electron.OpenDialogOptions) => Promise<Electron.OpenDialogReturnValue>
         saveDialog: (options: Electron.SaveDialogOptions) => Promise<Electron.SaveDialogReturnValue>
+      }
+      assets: {
+        writeDataUrl: (relPath: string, dataUrl: string) => Promise<{ success: boolean; url?: string; error?: string }>
+        readBase64: (relPath: string) => Promise<{ success: boolean; base64?: string; error?: string }>
       }
       renderer: {
         open: (type: string, url: string) => Promise<{ success: boolean; id?: number }>

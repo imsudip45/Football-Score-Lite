@@ -539,7 +539,8 @@ export function FootballGraphicsControl() {
     }
     
     setTimeout(() => {
-      toggleLineup(true)
+      // Pass the team so the graphics store tracks which lineup is active (used by some UI logic)
+      toggleLineup(true, team)
       setLastPushedGraphic(`${selectedTeamData.name} Lineup`)
       toast.success(`${selectedTeamData.name} lineup shown`)
     }, delay)

@@ -74,16 +74,16 @@ const SubstitutionOverlay: React.FC<SubstitutionOverlayProps> = ({
         @keyframes subContentIn { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
         @keyframes subContentOut { from { clip-path: inset(0 0 0 0); } to { clip-path: inset(0 100% 0 0); } }
         @keyframes subContainerOut {
-          0% { opacity: 1; }
-          90% { opacity: 1; }
-          100% { opacity: 0; }
+          from { opacity: 1; }
+          to { opacity: 0; }
         }
 
         .anim-sub-logo-in { animation: subLogoIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .anim-sub-logo-out { animation: subLogoOut 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards 0s; }
-        .anim-sub-content-in { animation: subContentIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards 0.2s; clip-path: inset(0 100% 0 0); }
+        /* Start wiping immediately to avoid showing an empty "box" area before content reveals */
+        .anim-sub-content-in { animation: subContentIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards 0s; clip-path: inset(0 100% 0 0); }
         .anim-sub-content-out { animation: subContentOut 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards 0s; }
-        .anim-sub-container-out { animation: subContainerOut 0.7s ease-in forwards; }
+        .anim-sub-container-out { animation: subContainerOut 0.45s ease-in forwards; }
         
         /* Dynamic pattern animation keyframes */
         ${getPatternAnimationCSS()}

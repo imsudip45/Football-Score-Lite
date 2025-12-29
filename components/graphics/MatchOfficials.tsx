@@ -106,19 +106,19 @@ const MatchOfficials: React.FC<MatchOfficialsProps> = ({
         
         /* Container fade out */
         @keyframes moContainerOut {
-          0% { opacity: 1; }
-          90% { opacity: 1; }
-          100% { opacity: 0; }
+          from { opacity: 1; }
+          to { opacity: 0; }
         }
         
         /* Classes */
         .anim-mo-sidebar-in { animation: moSidebarIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .anim-mo-sidebar-out { animation: moSidebarOut 0.5s cubic-bezier(0.7, 0, 0.84, 0) forwards 0.3s; }
 
-        .anim-mo-content-in { animation: moContentIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards 0.2s; clip-path: inset(0 100% 0 0); }
+        /* Start wiping immediately to avoid showing an empty "box" area before content reveals */
+        .anim-mo-content-in { animation: moContentIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards 0s; clip-path: inset(0 100% 0 0); }
         .anim-mo-content-out { animation: moContentOut 0.5s cubic-bezier(0.7, 0, 0.84, 0) forwards 0s; }
         
-        .anim-mo-container-out { animation: moContainerOut 1s ease-in forwards; }
+        .anim-mo-container-out { animation: moContainerOut 0.8s ease-in forwards; }
       `}</style>
 
       <div className="flex w-[450px] shadow-2xl overflow-hidden">

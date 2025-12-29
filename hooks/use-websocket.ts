@@ -1,12 +1,51 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useAppStore } from '@/lib/store'
 import { useGraphicsStore } from '@/lib/graphics-store'
+import { useGraphicsCustomizationStore } from '@/lib/graphics-customization-store'
 import type { TickerItem } from '@/lib/types'
 
 const WS_URL = 'ws://localhost:8080'
 const MAX_OUTBOUND_BYTES = 5 * 1024 * 1024 // 5MB limit for base64 images
 const MAX_RECONNECT_ATTEMPTS = 50
 const MAX_QUEUE_SIZE = 100
+
+// WS payload sanitizers:
+// - Player photos are often stored as base64 `data:` URLs and can easily exceed the WS size limit.
+// - Team/league logos are fewer; we keep them unless they are extremely large.
+const stripLargeDataUrl = (value?: string, maxChars = 300_000): string => {
+  if (!value) return ''
+  if (!value.startsWith('data:')) return value
+  return value.length <= maxChars ? value : ''
+}
+
+const stripPlayerPhotoForWs = (value?: string): string | undefined => {
+  if (!value) return undefined
+  // Never send base64 player photos over WS (too heavy, and re-sent frequently).
+  if (value.startsWith('data:')) return undefined
+  // zip:// is an internal export format and isn't resolvable by the renderer.
+  if (value.startsWith('zip://')) return undefined
+  return value
+}
+
+// Commentator sync can include full match objects; strip any embedded base64 to avoid huge WS frames.
+const sanitizeForCommentatorSync = <T,>(value: T): T => {
+  if (!value) return value
+  try {
+    return JSON.parse(
+      JSON.stringify(value, (_k, v) => {
+        if (typeof v === 'string') {
+          if (v.startsWith('data:')) return ''
+          if (v.startsWith('zip://')) return ''
+          // Extra safety: drop extremely large strings
+          if (v.length > 300_000) return ''
+        }
+        return v
+      }),
+    )
+  } catch {
+    return value
+  }
+}
 
 interface WebSocketMessage {
   type: string
@@ -57,6 +96,10 @@ export function useWebSocket() {
     matchOfficialsVisible,
     activePreset,
   } = useGraphicsStore()
+
+  // IMPORTANT: customization is persisted to localStorage, which does NOT sync across file:// pages in production.
+  // We include a sanitized snapshot in WS state so the renderer always receives the latest customization.
+  const customizationState = useGraphicsCustomizationStore()
 
   const {
     activeLowerThird,
@@ -249,7 +292,7 @@ export function useWebSocket() {
             (currentMatch.competition.length <= 5 ? currentMatch.competition : 
              currentMatch.competition.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 4)) 
             : 'NSL'),
-        leagueLogo: currentMatch?.competitionLogo || '',
+        leagueLogo: stripLargeDataUrl(currentMatch?.competitionLogo || ''),
         leagueColor: currentMatch?.tournamentColor || '#EF3E42',
         homeTeam: {
           name: homeTeam.name,
@@ -257,7 +300,7 @@ export function useWebSocket() {
           score: homeScore,
           color: homeTeam.primaryColor,
           secondaryColor: homeTeam.secondaryColor || homeTeam.primaryColor,
-          logo: homeTeam.logo || '',
+          logo: stripLargeDataUrl(homeTeam.logo || ''),
         },
         awayTeam: {
           name: awayTeam.name,
@@ -265,7 +308,7 @@ export function useWebSocket() {
           score: awayScore,
           color: awayTeam.primaryColor,
           secondaryColor: awayTeam.secondaryColor || awayTeam.primaryColor,
-          logo: awayTeam.logo || '',
+          logo: stripLargeDataUrl(awayTeam.logo || ''),
         },
         timer: {
           minutes: Math.floor(matchTime / 60),
@@ -302,7 +345,7 @@ export function useWebSocket() {
         playerNumber: goalData?.playerNumber || '',
         goalTime: goalData?.goalTime || '',
         teamColor: goalData?.team === 'away' ? awayTeam.primaryColor : homeTeam.primaryColor,
-        teamLogo: goalData?.team === 'away' ? (awayTeam.logo || '') : (homeTeam.logo || ''),
+        teamLogo: stripLargeDataUrl(goalData?.team === 'away' ? (awayTeam.logo || '') : (homeTeam.logo || '')),
         isOwnGoal: goalData?.isOwnGoal || false,
         isPenalty: goalData?.isPenalty || false,
         team: goalData?.team || 'home',
@@ -318,7 +361,7 @@ export function useWebSocket() {
         cardType: cardData?.cardType || 'yellow',
         cardTime: cardData?.cardTime || '',
         teamColor: cardData?.team === 'away' ? awayTeam.primaryColor : homeTeam.primaryColor,
-        teamLogo: cardData?.team === 'away' ? (awayTeam.logo || '') : (homeTeam.logo || ''),
+        teamLogo: stripLargeDataUrl(cardData?.team === 'away' ? (awayTeam.logo || '') : (homeTeam.logo || '')),
         team: cardData?.team || 'home',
         // Pass all team colors for proper customization resolution
         homeColors: { primary: homeTeam.primaryColor, secondary: homeTeam.secondaryColor || homeTeam.primaryColor },
@@ -332,7 +375,7 @@ export function useWebSocket() {
         numberOut: subData?.numberOut || '',
         teamColor: subData?.team === 'away' ? awayTeam.primaryColor : homeTeam.primaryColor,
         team: subData?.team || 'home',
-        teamLogo: subData?.team === 'away' ? (awayTeam.logo || '') : (homeTeam.logo || ''),
+        teamLogo: stripLargeDataUrl(subData?.team === 'away' ? (awayTeam.logo || '') : (homeTeam.logo || '')),
         // Pass all team colors for proper customization resolution
         homeColors: { primary: homeTeam.primaryColor, secondary: homeTeam.secondaryColor || homeTeam.primaryColor },
         awayColors: { primary: awayTeam.primaryColor, secondary: awayTeam.secondaryColor || awayTeam.primaryColor },
@@ -344,20 +387,20 @@ export function useWebSocket() {
           name: homeTeam.name,
           color: homeTeam.primaryColor,
           secondaryColor: homeTeam.secondaryColor || homeTeam.primaryColor,
-          logo: homeTeam.logo || '',
+          logo: stripLargeDataUrl(homeTeam.logo || ''),
           score: homeScore,
         },
         awayTeam: {
           name: awayTeam.name,
           color: awayTeam.primaryColor,
           secondaryColor: awayTeam.secondaryColor || awayTeam.primaryColor,
-          logo: awayTeam.logo || '',
+          logo: stripLargeDataUrl(awayTeam.logo || ''),
           score: awayScore,
         },
         matchInfo: currentMatch?.round || (currentMatch?.matchDay ? `Match Day ${currentMatch.matchDay}` : ''),
         venue: currentMatch?.venue || '',
         competition: currentMatch?.competition || '',
-        competitionLogo: currentMatch?.competitionLogo || '',
+        competitionLogo: stripLargeDataUrl(currentMatch?.competitionLogo || ''),
         tournamentColor: currentMatch?.tournamentColor || '',
       },
       nameplate: {
@@ -371,10 +414,10 @@ export function useWebSocket() {
             ? '#6366f1' // Neutral purple for officials
             : homeTeam.primaryColor,
         teamLogo: nameplateData?.team === 'away' 
-          ? (awayTeam.logo || '') 
+          ? stripLargeDataUrl(awayTeam.logo || '') 
           : nameplateData?.team === 'neutral'
-            ? (currentMatch?.competitionLogo || '') // Use competition logo for officials
-            : (homeTeam.logo || ''),
+            ? stripLargeDataUrl(currentMatch?.competitionLogo || '') // Use competition logo for officials
+            : stripLargeDataUrl(homeTeam.logo || ''),
         team: nameplateData?.team || 'home',
         // Fallback text when no logo available (competition short name)
         logoFallbackText: nameplateData?.team === 'neutral' && !currentMatch?.competitionLogo 
@@ -392,14 +435,14 @@ export function useWebSocket() {
         teamSecondaryColor: lineupData?.team === 'away' 
           ? (awayTeam.secondaryColor || awayTeam.primaryColor)
           : (homeTeam.secondaryColor || homeTeam.primaryColor),
-        teamLogo: lineupData?.teamLogo || (lineupData?.team === 'away' ? awayTeam.logo : homeTeam.logo) || '',
+        teamLogo: stripLargeDataUrl(lineupData?.teamLogo || (lineupData?.team === 'away' ? awayTeam.logo : homeTeam.logo) || ''),
         formation: lineupData?.formation || '4-3-3',
         players: (lineupData?.players || []).map(p => ({
           number: p.number,
           name: p.name,
           shortName: p.shortName,
           position: p.position,
-          photo: p.photo,
+          photo: stripPlayerPhotoForWs(p.photo),
         })),
         subs: lineupData?.subs || [],
         coach: lineupData?.coach || '',
@@ -408,7 +451,7 @@ export function useWebSocket() {
         visible: matchStatsLowerThirdVisible,
         homeTeam: {
           name: homeTeam.name,
-          logo: homeTeam.logo,
+          logo: stripLargeDataUrl(homeTeam.logo),
           color: homeTeam.primaryColor,
           secondaryColor: homeTeam.secondaryColor || homeTeam.primaryColor,
           score: currentMatch?.homeScore || 0,
@@ -418,7 +461,7 @@ export function useWebSocket() {
         },
         awayTeam: {
           name: awayTeam.name,
-          logo: awayTeam.logo,
+          logo: stripLargeDataUrl(awayTeam.logo),
           color: awayTeam.primaryColor,
           secondaryColor: awayTeam.secondaryColor || awayTeam.primaryColor,
           score: currentMatch?.awayScore || 0,
@@ -432,7 +475,7 @@ export function useWebSocket() {
             (currentMatch.competition.length <= 5 ? currentMatch.competition : 
              currentMatch.competition.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 4)) 
             : 'NSL'),
-        leagueLogo: currentMatch?.competitionLogo || '',
+        leagueLogo: stripLargeDataUrl(currentMatch?.competitionLogo || ''),
         leagueColor: currentMatch?.tournamentColor || '#EF3E42',
         matchDay: currentMatch?.round || 'MATCH DAY',
         showScorers: 'both',
@@ -447,13 +490,13 @@ export function useWebSocket() {
         visible: matchStatsFullScreenVisible,
         homeTeam: {
           name: homeTeam.name,
-          logo: homeTeam.logo,
+          logo: stripLargeDataUrl(homeTeam.logo),
           color: homeTeam.primaryColor,
           secondaryColor: homeTeam.secondaryColor || homeTeam.primaryColor,
         },
         awayTeam: {
           name: awayTeam.name,
-          logo: awayTeam.logo,
+          logo: stripLargeDataUrl(awayTeam.logo),
           color: awayTeam.primaryColor,
           secondaryColor: awayTeam.secondaryColor || awayTeam.primaryColor,
         },
@@ -504,6 +547,8 @@ export function useWebSocket() {
         leagueLogo: currentMatch?.competitionLogo || '',
         tournamentColor: currentMatch?.tournamentColor || '#EF3E42', // Use tournament color if available
       },
+      // Renderer-only: customization snapshot (no functions, no huge strings)
+      customization: sanitizeForCommentatorSync(customizationState),
     }
 
     // Send state update via WebSocket (using sendMessage for queuing)
@@ -587,6 +632,7 @@ export function useWebSocket() {
     currentMatch?.competitionLogo,
     currentMatch?.tournamentColor,
     currentMatch?.updatedAt,
+    customizationState, // Ensure customization changes trigger WS updates (required for production file:// renderer)
     setLastSyncTime,
     sendMessage,
   ])
@@ -603,7 +649,7 @@ export function useWebSocket() {
     sendMessage({
       type: 'COMMENTATOR_SYNC',
       matchState: {
-        currentMatch: currentMatch,
+        currentMatch: sanitizeForCommentatorSync(currentMatch),
         matchTime: matchTime,
         timerRunning: timerRunning,
       },

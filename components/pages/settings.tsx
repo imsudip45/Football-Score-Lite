@@ -63,17 +63,60 @@ export function Settings() {
       const data = JSON.parse(jsonData)
       
       // Extract images from data and replace with file references
+      // Supports:
+      // - data: URLs (legacy storage)
+      // - app-assets:// URLs (new Electron storage under userData/assets)
       const images: { path: string; data: string }[] = []
       let imageIndex = 0
+
+      const isElectron = typeof window !== "undefined" && !!(window as any).electronAPI?.assets?.readBase64
+
+      const assetRelFromUrl = (url: string) => {
+        // app-assets:///<rel>
+        if (url.startsWith("app-assets:///")) return url.replace("app-assets:///", "")
+        // app-assets://rel (fallback)
+        if (url.startsWith("app-assets://")) return url.replace("app-assets://", "").replace(/^\/+/, "")
+        return ""
+      }
+
+      const extFromValueOrPath = (value: string, fallbackExt: string) => {
+        if (value.startsWith("data:image/jpeg")) return "jpg"
+        if (value.startsWith("data:image/jpg")) return "jpg"
+        if (value.startsWith("data:image/webp")) return "webp"
+        if (value.startsWith("data:image/png")) return "png"
+        const m = /\.([a-z0-9]+)$/i.exec(fallbackExt || "")
+        return (m?.[1] || "png").toLowerCase()
+      }
+
+      const addImageToZip = async (imgPath: string, src: string) => {
+        if (src.startsWith("data:")) {
+          images.push({ path: imgPath, data: src })
+          return true
+        }
+        if (src.startsWith("app-assets://") && isElectron) {
+          const rel = assetRelFromUrl(src)
+          if (!rel) return false
+          const res = await (window as any).electronAPI.assets.readBase64(rel)
+          if (res?.success && res.base64) {
+            images.push({ path: imgPath, data: `data:image/${extFromValueOrPath(imgPath, imgPath)};base64,${res.base64}` })
+            return true
+          }
+          return false
+        }
+        return false
+      }
       
       // Process team logos
       if (data.teams) {
         for (const team of data.teams) {
-          if (team.logo && team.logo.startsWith('data:')) {
-            const imgPath = `images/team_${team.id}_logo.png`
-            images.push({ path: imgPath, data: team.logo })
-            team.logo = `zip://${imgPath}`
-            imageIndex++
+          if (team.logo && (team.logo.startsWith('data:') || team.logo.startsWith('app-assets://'))) {
+            const ext = extFromValueOrPath(team.logo, team.logo)
+            const imgPath = `images/team_${team.id}_logo.${ext}`
+            const ok = await addImageToZip(imgPath, team.logo)
+            if (ok) {
+              team.logo = `zip://${imgPath}`
+              imageIndex++
+            }
           }
         }
       }
@@ -81,11 +124,14 @@ export function Settings() {
       // Process player photos
       if (data.players) {
         for (const player of data.players) {
-          if (player.photo && player.photo.startsWith('data:')) {
-            const imgPath = `images/player_${player.id}_photo.png`
-            images.push({ path: imgPath, data: player.photo })
-            player.photo = `zip://${imgPath}`
-            imageIndex++
+          if (player.photo && (player.photo.startsWith('data:') || player.photo.startsWith('app-assets://'))) {
+            const ext = extFromValueOrPath(player.photo, player.photo)
+            const imgPath = `images/player_${player.id}_photo.${ext}`
+            const ok = await addImageToZip(imgPath, player.photo)
+            if (ok) {
+              player.photo = `zip://${imgPath}`
+              imageIndex++
+            }
           }
         }
       }
@@ -93,11 +139,14 @@ export function Settings() {
       // Process official photos
       if (data.officials) {
         for (const official of data.officials) {
-          if (official.photo && official.photo.startsWith('data:')) {
-            const imgPath = `images/official_${official.id}_photo.png`
-            images.push({ path: imgPath, data: official.photo })
-            official.photo = `zip://${imgPath}`
-            imageIndex++
+          if (official.photo && (official.photo.startsWith('data:') || official.photo.startsWith('app-assets://'))) {
+            const ext = extFromValueOrPath(official.photo, official.photo)
+            const imgPath = `images/official_${official.id}_photo.${ext}`
+            const ok = await addImageToZip(imgPath, official.photo)
+            if (ok) {
+              official.photo = `zip://${imgPath}`
+              imageIndex++
+            }
           }
         }
       }
@@ -105,11 +154,14 @@ export function Settings() {
       // Process tournament logos
       if (data.tournaments) {
         for (const tournament of data.tournaments) {
-          if (tournament.logo && tournament.logo.startsWith('data:')) {
-            const imgPath = `images/tournament_${tournament.id}_logo.png`
-            images.push({ path: imgPath, data: tournament.logo })
-            tournament.logo = `zip://${imgPath}`
-            imageIndex++
+          if (tournament.logo && (tournament.logo.startsWith('data:') || tournament.logo.startsWith('app-assets://'))) {
+            const ext = extFromValueOrPath(tournament.logo, tournament.logo)
+            const imgPath = `images/tournament_${tournament.id}_logo.${ext}`
+            const ok = await addImageToZip(imgPath, tournament.logo)
+            if (ok) {
+              tournament.logo = `zip://${imgPath}`
+              imageIndex++
+            }
           }
         }
       }
@@ -139,7 +191,7 @@ export function Settings() {
       
       // Add metadata
       zip.file('metadata.json', JSON.stringify({
-        version: '2.0',
+        version: '3.0',
         exportDate: new Date().toISOString(),
         imageCount: images.length,
         includesSettings: true,
@@ -183,19 +235,39 @@ export function Settings() {
       
       const dbContent = await dbFile.async('string')
       const data = JSON.parse(dbContent)
+
+      const isElectron = typeof window !== "undefined" && !!(window as any).electronAPI?.assets?.writeDataUrl
+      const mimeFromPath = (p: string) => {
+        const lower = (p || "").toLowerCase()
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg"
+        if (lower.endsWith(".webp")) return "image/webp"
+        return "image/png"
+      }
+
+      const restoreZipImage = async (zipRef: string) => {
+        const imgPath = zipRef.replace('zip://', '')
+        const imgFile = zip.file(imgPath)
+        if (!imgFile) return undefined
+        const base64 = await imgFile.async('base64')
+
+        // If running in Electron, write to userData/assets and store app-assets:// URL in DB.
+        if (isElectron) {
+          const dataUrl = `data:${mimeFromPath(imgPath)};base64,${base64}`
+          const res = await (window as any).electronAPI.assets.writeDataUrl(imgPath, dataUrl)
+          if (res?.success && res.url) return res.url as string
+          // Fallback to data url if write fails
+          return dataUrl
+        }
+
+        // Browser fallback: keep base64 data URL
+        return `data:${mimeFromPath(imgPath)};base64,${base64}`
+      }
       
       // Restore images from zip
       if (data.teams) {
         for (const team of data.teams) {
           if (team.logo && team.logo.startsWith('zip://')) {
-            const imgPath = team.logo.replace('zip://', '')
-            const imgFile = zip.file(imgPath)
-            if (imgFile) {
-              const imgData = await imgFile.async('base64')
-              team.logo = `data:image/png;base64,${imgData}`
-            } else {
-              team.logo = undefined
-            }
+            team.logo = (await restoreZipImage(team.logo)) || undefined
           }
         }
       }
@@ -203,14 +275,7 @@ export function Settings() {
       if (data.players) {
         for (const player of data.players) {
           if (player.photo && player.photo.startsWith('zip://')) {
-            const imgPath = player.photo.replace('zip://', '')
-            const imgFile = zip.file(imgPath)
-            if (imgFile) {
-              const imgData = await imgFile.async('base64')
-              player.photo = `data:image/png;base64,${imgData}`
-            } else {
-              player.photo = undefined
-            }
+            player.photo = (await restoreZipImage(player.photo)) || undefined
           }
         }
       }
@@ -218,14 +283,7 @@ export function Settings() {
       if (data.officials) {
         for (const official of data.officials) {
           if (official.photo && official.photo.startsWith('zip://')) {
-            const imgPath = official.photo.replace('zip://', '')
-            const imgFile = zip.file(imgPath)
-            if (imgFile) {
-              const imgData = await imgFile.async('base64')
-              official.photo = `data:image/png;base64,${imgData}`
-            } else {
-              official.photo = undefined
-            }
+            official.photo = (await restoreZipImage(official.photo)) || undefined
           }
         }
       }
@@ -233,14 +291,7 @@ export function Settings() {
       if (data.tournaments) {
         for (const tournament of data.tournaments) {
           if (tournament.logo && tournament.logo.startsWith('zip://')) {
-            const imgPath = tournament.logo.replace('zip://', '')
-            const imgFile = zip.file(imgPath)
-            if (imgFile) {
-              const imgData = await imgFile.async('base64')
-              tournament.logo = `data:image/png;base64,${imgData}`
-            } else {
-              tournament.logo = undefined
-            }
+            tournament.logo = (await restoreZipImage(tournament.logo)) || undefined
           }
         }
       }

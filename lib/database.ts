@@ -4,6 +4,36 @@
 import Dexie, { type Table } from "dexie"
 import type { Tournament, Team, Player, Official, Match } from "./types"
 
+// ============================================================
+// Asset helpers (Electron): store heavy base64 images as files under userData/assets
+// and reference them via app-assets:// URLs.
+// ============================================================
+function getDataUrlExt(dataUrl: string): "png" | "jpg" | "jpeg" | "webp" {
+  const m = /^data:([^;]+);base64,/i.exec(dataUrl || "")
+  const mime = (m?.[1] || "").toLowerCase()
+  if (mime.includes("jpeg")) return "jpg"
+  if (mime.includes("jpg")) return "jpg"
+  if (mime.includes("webp")) return "webp"
+  return "png"
+}
+
+function isAppAssetsUrl(value?: string): boolean {
+  return !!value && value.startsWith("app-assets://")
+}
+
+async function externalizeImageIfNeeded(kind: string, id: string, value?: string): Promise<string | undefined> {
+  if (!value) return value
+  if (isAppAssetsUrl(value)) return value
+  if (!value.startsWith("data:")) return value
+  if (typeof window === "undefined" || !(window as any).electronAPI?.assets?.writeDataUrl) return value
+
+  const ext = getDataUrlExt(value)
+  const relPath = `images/${kind}_${id}.${ext}`
+  const res = await (window as any).electronAPI.assets.writeDataUrl(relPath, value)
+  if (res?.success && res.url) return res.url
+  return value
+}
+
 // Database schema interfaces
 interface DBTournament {
   id: string
@@ -168,6 +198,7 @@ export async function createTournament(
 ): Promise<Tournament> {
   const database = getDB()
   const now = new Date().toISOString()
+  const logo = await externalizeImageIfNeeded("tournament_logo", tournament.id, tournament.logo)
 
   const dbTournament: DBTournament = {
     id: tournament.id,
@@ -175,7 +206,7 @@ export async function createTournament(
     shortName: tournament.shortName,
     type: tournament.type,
     season: tournament.season,
-    logo: tournament.logo,
+    logo,
     color: tournament.color,
     country: tournament.country,
     startDate: tournament.startDate?.toISOString(),
@@ -254,7 +285,7 @@ export async function updateTournament(id: string, updates: Partial<Tournament>)
   if (updates.shortName !== undefined) updateData.shortName = updates.shortName
   if (updates.type !== undefined) updateData.type = updates.type
   if (updates.season !== undefined) updateData.season = updates.season
-  if (updates.logo !== undefined) updateData.logo = updates.logo
+  if (updates.logo !== undefined) updateData.logo = await externalizeImageIfNeeded("tournament_logo", id, updates.logo)
   if (updates.color !== undefined) updateData.color = updates.color
   if (updates.country !== undefined) updateData.country = updates.country
 
@@ -277,13 +308,14 @@ export async function createTeam(
 ): Promise<Team> {
   const database = getDB()
   const now = new Date().toISOString()
+  const logo = await externalizeImageIfNeeded("team_logo", team.id, team.logo)
 
   const dbTeam: DBTeam = {
     id: team.id,
     tournamentId,
     name: team.name,
     shortName: team.shortName,
-    logo: team.logo,
+    logo,
     primaryColor: team.primaryColor,
     secondaryColor: team.secondaryColor,
     defaultFormation: team.defaultFormation,
@@ -379,7 +411,7 @@ export async function updateTeam(id: string, updates: Partial<Team>): Promise<vo
 
   if (updates.name !== undefined) updateData.name = updates.name
   if (updates.shortName !== undefined) updateData.shortName = updates.shortName
-  if (updates.logo !== undefined) updateData.logo = updates.logo
+  if (updates.logo !== undefined) updateData.logo = await externalizeImageIfNeeded("team_logo", id, updates.logo)
   if (updates.primaryColor !== undefined) updateData.primaryColor = updates.primaryColor
   if (updates.secondaryColor !== undefined) updateData.secondaryColor = updates.secondaryColor
   if (updates.defaultFormation !== undefined) updateData.defaultFormation = updates.defaultFormation
@@ -401,6 +433,7 @@ export async function deleteTeam(id: string): Promise<void> {
 
 export async function addPlayer(teamId: string, player: Player): Promise<void> {
   const database = getDB()
+  const photo = await externalizeImageIfNeeded("player_photo", player.id, player.photo)
 
   const dbPlayer: DBPlayer = {
     id: player.id,
@@ -411,7 +444,7 @@ export async function addPlayer(teamId: string, player: Player): Promise<void> {
     position: player.position,
     isCaptain: player.isCaptain || false,
     isKeeper: player.isKeeper || false,
-    photo: player.photo,
+    photo,
     nationality: player.nationality,
     dateOfBirth: player.dateOfBirth?.toISOString(),
     height: player.height,
@@ -429,6 +462,7 @@ export async function addPlayersFromCSV(teamId: string, players: Player[]): Prom
 
   for (const player of players) {
     try {
+      const photo = await externalizeImageIfNeeded("player_photo", player.id, player.photo)
       const dbPlayer: DBPlayer = {
         id: player.id,
         teamId,
@@ -438,7 +472,7 @@ export async function addPlayersFromCSV(teamId: string, players: Player[]): Prom
         position: player.position,
         isCaptain: player.isCaptain || false,
         isKeeper: player.isKeeper || false,
-        photo: player.photo,
+        photo,
         nationality: player.nationality,
         dateOfBirth: player.dateOfBirth?.toISOString(),
         height: player.height,
@@ -467,7 +501,7 @@ export async function updatePlayer(id: string, updates: Partial<Player>): Promis
   if (updates.position !== undefined) updateData.position = updates.position
   if (updates.isCaptain !== undefined) updateData.isCaptain = updates.isCaptain
   if (updates.isKeeper !== undefined) updateData.isKeeper = updates.isKeeper
-  if (updates.photo !== undefined) updateData.photo = updates.photo
+  if (updates.photo !== undefined) updateData.photo = await externalizeImageIfNeeded("player_photo", id, updates.photo)
   if (updates.nationality !== undefined) updateData.nationality = updates.nationality
 
   await database.players.update(id, updateData)
@@ -489,6 +523,7 @@ export async function deleteAllPlayersFromTeam(teamId: string): Promise<void> {
 
 export async function createOfficial(official: Official): Promise<void> {
   const database = getDB()
+  const photo = await externalizeImageIfNeeded("official_photo", official.id, official.photo)
 
   const dbOfficial: DBOfficial = {
     id: official.id,
@@ -496,7 +531,7 @@ export async function createOfficial(official: Official): Promise<void> {
     role: official.role,
     badge: official.badge,
     contact: official.contact,
-    photo: official.photo,
+    photo,
     nationality: official.nationality,
     tournamentId: official.tournamentId,
     createdAt: new Date().toISOString(),
@@ -546,13 +581,14 @@ export async function addOfficialsFromCSV(officials: Official[]): Promise<number
 
   for (const official of officials) {
     try {
+      const photo = await externalizeImageIfNeeded("official_photo", official.id, official.photo)
       const dbOfficial: DBOfficial = {
         id: official.id,
         name: official.name,
         role: official.role,
         badge: official.badge,
         contact: official.contact,
-        photo: official.photo,
+        photo,
         nationality: official.nationality,
         createdAt: new Date().toISOString(),
       }
@@ -575,9 +611,13 @@ export async function updateOfficial(id: string, updates: Partial<Official>): Pr
   const database = getDB()
   const existing = await database.officials.get(id)
   if (existing) {
+    const normalized: Partial<DBOfficial> = { ...updates }
+    if ((updates as any).photo !== undefined) {
+      ;(normalized as any).photo = await externalizeImageIfNeeded("official_photo", id, (updates as any).photo)
+    }
     await database.officials.put({
       ...existing,
-      ...updates,
+      ...normalized,
       id, // Ensure ID doesn't change
     })
   }

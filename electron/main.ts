@@ -1,8 +1,13 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
-import { join } from 'path'
+import { app, BrowserWindow, ipcMain, dialog, protocol } from 'electron'
+import { join, normalize, sep } from 'path'
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import { startWebSocketServer, startHttpServer } from './server'
+
+// Allow `app-assets://...` URLs to be used for loading local userData assets (images).
+protocol.registerSchemesAsPrivileged([
+  { scheme: 'app-assets', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
+])
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
@@ -11,6 +16,20 @@ let rendererWindows: Map<string, BrowserWindow> = new Map()
 
 const WS_PORT = 8080
 const HTTP_PORT = 3000
+
+function getAssetsDir(): string {
+  return join(app.getPath('userData'), 'assets')
+}
+
+function sanitizeRelativePath(relPath: string): string {
+  // Normalize and prevent path traversal. Return a safe relative path using OS separators.
+  const cleaned = relPath.replace(/^([/\\])+/, '')
+  const norm = normalize(cleaned)
+  if (norm.startsWith('..' + sep) || norm === '..' || norm.includes('..' + sep)) {
+    throw new Error('Invalid asset path')
+  }
+  return norm
+}
 
 // Get the correct path for static files in production
 function getAppPath(): string {
@@ -126,6 +145,43 @@ function setupIpcHandlers() {
     }
   })
 
+  // Asset operations (binary-safe) for images stored in userData/assets
+  ipcMain.handle('assets:writeDataUrl', async (_event, relPath: string, dataUrl: string) => {
+    try {
+      const safeRel = sanitizeRelativePath(relPath)
+      const assetsDir = getAssetsDir()
+      const absPath = join(assetsDir, safeRel)
+      const dir = join(absPath, '..')
+      if (!existsSync(dir)) {
+        await mkdir(dir, { recursive: true })
+      }
+
+      const match = /^data:([^;]+);base64,(.+)$/i.exec(dataUrl || '')
+      if (!match) {
+        return { success: false, error: 'Invalid data URL' }
+      }
+      const base64 = match[2]
+      const buf = Buffer.from(base64, 'base64')
+      await writeFile(absPath, buf)
+
+      const urlPath = safeRel.split(sep).join('/')
+      return { success: true, url: `app-assets:///${urlPath}` }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  ipcMain.handle('assets:readBase64', async (_event, relPath: string) => {
+    try {
+      const safeRel = sanitizeRelativePath(relPath)
+      const absPath = join(getAssetsDir(), safeRel)
+      const buf = await readFile(absPath)
+      return { success: true, base64: buf.toString('base64') }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
   ipcMain.handle('file:load', async (_event, path: string) => {
     try {
       const data = await readFile(path, 'utf-8')
@@ -182,6 +238,24 @@ function setupIpcHandlers() {
 
 app.whenReady().then(() => {
   try {
+    // Register protocol for userData assets
+    protocol.registerFileProtocol('app-assets', (request, callback) => {
+      try {
+        const url = new URL(request.url)
+        // Support both:
+        // - app-assets:///images/foo.png  -> host: "" , pathname: "/images/foo.png"
+        // - app-assets://images/foo.png  -> host: "images", pathname: "/foo.png"
+        const rawRel = url.host ? `${url.host}${url.pathname || ''}` : (url.pathname || '')
+        const rel = decodeURIComponent(rawRel).replace(/^\/+/, '')
+        const safeRel = sanitizeRelativePath(rel)
+        const absPath = join(getAssetsDir(), safeRel)
+        callback({ path: absPath })
+      } catch (_e) {
+        // Fail closed
+        callback({ error: -6 }) // net::ERR_FILE_NOT_FOUND
+      }
+    })
+
     // Start WebSocket server
     startWebSocketServer(WS_PORT)
     console.log('[Electron] WebSocket server started on port', WS_PORT)

@@ -103,18 +103,18 @@ const EventOverlay: React.FC<EventOverlayProps> = ({
           to { transform: translateY(-50%) scale(0) rotate(-45deg); opacity: 0; } 
         }
         @keyframes eoContainerOut {
-          0% { opacity: 1; }
-          90% { opacity: 1; }
-          100% { opacity: 0; }
+          from { opacity: 1; }
+          to { opacity: 0; }
         }
 
         .anim-eo-logo-in { animation: eoLogoIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .anim-eo-logo-out { animation: eoLogoOut 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards 0s; }
-        .anim-eo-wipe-in { animation: eoWipeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards 0.2s; clip-path: inset(0 100% 0 0); }
+        /* Start wiping immediately to avoid showing an empty "box" area before content reveals */
+        .anim-eo-wipe-in { animation: eoWipeIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards 0s; clip-path: inset(0 100% 0 0); }
         .anim-eo-wipe-out { animation: eoWipeOut 0.4s cubic-bezier(0.7, 0, 0.84, 0) forwards 0s; }
         .anim-eo-card-in { animation: eoCardIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards 0.5s; opacity: 0; }
         .anim-eo-card-out { animation: eoCardOut 0.4s ease-in forwards 0s; }
-        .anim-eo-container-out { animation: eoContainerOut 0.7s ease-in forwards; }
+        .anim-eo-container-out { animation: eoContainerOut 0.45s ease-in forwards; }
         
         /* Dynamic pattern animation keyframes */
         ${getPatternAnimationCSS()}
