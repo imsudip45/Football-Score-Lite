@@ -2393,19 +2393,6 @@ export function LiveControl() {
           </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            {/* Option to view match summary - Requirements: 8.2 */}
-            <Button
-              variant="outline"
-              className="flex-1 gap-2"
-              onClick={() => {
-                setMatchCompletedDialogOpen(false)
-                // Stay on live control to view the match summary/events
-                toast.info('You can review the match events above')
-              }}
-            >
-              <TrophyIcon className="h-4 w-4" />
-              View Summary
-            </Button>
             {/* Option to return to fixture list - Requirements: 8.2 */}
             <Button
               className="flex-1 gap-2"
