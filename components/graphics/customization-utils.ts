@@ -394,9 +394,10 @@ export function getPatternStyleWithAnimation(customization: any, id: string, tea
     // Preserve all background properties and add animation
     // IMPORTANT: Don't use the 'background' shorthand if we have individual properties
     const animatedStyle: React.CSSProperties = {
-      '--pattern-anim-size': `${size}px`,
       animation: animationValue,
     };
+    // Add CSS custom property using type assertion
+    (animatedStyle as any)['--pattern-anim-size'] = `${size}px`;
     
     // Copy individual background properties (avoid 'background' shorthand which can override everything)
     if (baseStyle.backgroundColor) animatedStyle.backgroundColor = baseStyle.backgroundColor;
