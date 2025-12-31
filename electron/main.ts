@@ -65,6 +65,18 @@ function createRendererWindow(type: string, url: string) {
   })
 
   window.loadURL(url)
+
+  // Ensure consistent layout scaling (prevents intermittent clipping that can change after DevTools toggles).
+  window.webContents.on('did-finish-load', () => {
+    try {
+      window.webContents.setZoomFactor(1)
+      // Lock zoom to avoid OS/gesture zoom affecting fixed 1920x1080 layouts.
+      ;(window.webContents as any).setVisualZoomLevelLimits?.(1, 1)?.catch?.(() => {})
+    } catch {
+      // ignore
+    }
+  })
+
   window.once('ready-to-show', () => {
     window.show()
   })
@@ -111,6 +123,16 @@ function createMainWindow() {
     console.log('[Electron] File exists:', existsSync(indexPath))
     mainWindow.loadFile(indexPath)
   }
+
+  // Ensure consistent layout scaling (prevents intermittent clipping that can change after DevTools toggles).
+  mainWindow.webContents.on('did-finish-load', () => {
+    try {
+      mainWindow?.webContents.setZoomFactor(1)
+      ;(mainWindow?.webContents as any)?.setVisualZoomLevelLimits?.(1, 1)?.catch?.(() => {})
+    } catch {
+      // ignore
+    }
+  })
 
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show()

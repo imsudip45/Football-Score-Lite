@@ -450,7 +450,7 @@ export const useGraphicsStore = create<GraphicsState>()(
 
       updateElementStyle: (graphicType, elementKey, updates) =>
         set((state) => {
-          const graphic = state.activePreset[graphicType] as Record<string, unknown>
+          const graphic = state.activePreset[graphicType] as unknown as Record<string, unknown>
           const element = graphic[elementKey] as GraphicElementStyle
 
           return {
@@ -467,7 +467,7 @@ export const useGraphicsStore = create<GraphicsState>()(
 
       updateElementFill: (graphicType, elementKey, fill) =>
         set((state) => {
-          const graphic = state.activePreset[graphicType] as Record<string, unknown>
+          const graphic = state.activePreset[graphicType] as unknown as Record<string, unknown>
           const element = graphic[elementKey] as GraphicElementStyle
 
           return {
@@ -484,7 +484,7 @@ export const useGraphicsStore = create<GraphicsState>()(
 
       updateFont: (graphicType, fontKey, updates) =>
         set((state) => {
-          const graphic = state.activePreset[graphicType] as Record<string, unknown>
+          const graphic = state.activePreset[graphicType] as unknown as Record<string, unknown>
           const font = graphic[fontKey] as FontConfig
 
           return {

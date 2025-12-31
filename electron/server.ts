@@ -245,8 +245,8 @@ let commentatorMatchState: CommentatorMatchState = {
 // Track commentator clients separately
 const commentatorClients: Set<WebSocket> = new Set()
 
-// Maximum message size (1MB safety cap)
-const MAX_MESSAGE_BYTES = 1024 * 1024
+// Maximum message size (align with controller outbound cap)
+const MAX_MESSAGE_BYTES = 5 * 1024 * 1024
 
 // Sanitize update payload to prevent oversized messages
 function sanitizeUpdatePayload(payload: any): any | null {

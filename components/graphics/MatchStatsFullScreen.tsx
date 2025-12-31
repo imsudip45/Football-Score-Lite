@@ -15,8 +15,8 @@ type AnimateState = 'in' | 'out';
 
 export interface MatchStatsFullScreenProps {
   animate?: AnimateState;
-  homeTeam: { name: string; logo?: string; color: string; secondaryColor?: string };
-  awayTeam: { name: string; logo?: string; color: string; secondaryColor?: string };
+  homeTeam: { name: string; logo?: string; color: string; secondaryColor?: string; score?: number };
+  awayTeam: { name: string; logo?: string; color: string; secondaryColor?: string; score?: number };
   stats: {
     shots: { home: number; away: number };
     shotsOnTarget: { home: number; away: number };
@@ -32,12 +32,14 @@ export interface MatchStatsFullScreenProps {
 const TeamPanel = ({
   name,
   logo,
+  score,
   color,
   side,
   style,
 }: {
   name: string;
   logo?: string;
+  score?: number;
   color: string;
   side: 'left' | 'right';
   style?: React.CSSProperties;
@@ -47,22 +49,32 @@ const TeamPanel = ({
       className={`relative h-full ${side === 'left' ? 'rounded-l-[6px]' : 'rounded-r-[6px]'} overflow-hidden`}
       style={{ backgroundColor: color, ...style }}
     >
-      {/* logo */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        {logo ? (
-          <img
-            src={logo}
-            alt=""
-            className="w-[360px] h-[360px] object-contain drop-shadow-[0_30px_60px_rgba(0,0,0,0.45)]"
-            draggable={false}
-          />
-        ) : (
-          <div className="w-[360px] h-[360px] rounded-full bg-black/25 flex items-center justify-center">
-            <span className="text-white/90 font-bold text-6xl tracking-widest">
-              {name.slice(0, 3).toUpperCase()}
-            </span>
-          </div>
-        )}
+      {/* score + logo + name */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <div className="text-white font-extrabold tabular-nums leading-none" style={{ fontFamily: 'var(--font-oswald), "Arial Narrow", sans-serif', fontSize: '140px', marginBottom: 16 }}>
+          {typeof score === 'number' ? score : 0}
+        </div>
+
+        <div className="flex items-center justify-center">
+          {logo ? (
+            <img
+              src={logo}
+              alt=""
+                className="w-[360px] h-[360px] object-contain"
+              draggable={false}
+            />
+          ) : (
+            <div className="w-[360px] h-[360px] rounded-full bg-black/25 flex items-center justify-center">
+              <span className="text-white/90 font-bold text-6xl tracking-widest">
+                {name.slice(0, 3).toUpperCase()}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="text-white font-bold uppercase tracking-[0.12em]" style={{ fontFamily: 'var(--font-oswald), "Arial Narrow", sans-serif', fontSize: '40px', marginTop: 18 }}>
+          {name}
+        </div>
       </div>
     </div>
   );
@@ -156,7 +168,7 @@ export default function MatchStatsFullScreen({
 
       {/* title */}
       <div className="absolute top-[70px] left-1/2 -translate-x-1/2">
-        <div className="drop-shadow-[0_10px_30px_rgba(0,0,0,0.6)]" style={titleStyle}>
+          <div style={titleStyle}>
           {title}
         </div>
       </div>

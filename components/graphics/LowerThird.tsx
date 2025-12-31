@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useGraphicsCustomizationStore } from '@/lib/graphics-customization-store';
-import { getTextColor, getPatternStyleWithAnimation, getPatternAnimationCSS } from './customization-utils';
+import { getTextColor, getPatternStyleWithAnimation, getPatternAnimationCSS, getFullTextStyle } from './customization-utils';
 
 interface LowerThirdProps {
   animate: 'in' | 'out';
@@ -76,7 +76,8 @@ export default function LowerThird({ animate, title, subtitle, teamColor = '#14b
               className="text-2xl font-bold uppercase tracking-wide"
               style={{ 
                 fontFamily: 'var(--font-oswald), "Arial Narrow", sans-serif',
-                color: getColor('title-text') || '#ffffff'
+                color: getColor('title-text') || '#ffffff',
+                ...getFullTextStyle(customization, 'title-text'),
               }}
             >
               {title}
@@ -86,7 +87,8 @@ export default function LowerThird({ animate, title, subtitle, teamColor = '#14b
                 className="text-base mt-0.5"
                 style={{ 
                   fontFamily: 'var(--font-oswald), "Arial Narrow", sans-serif',
-                  color: getColor('subtitle-text') || 'rgba(255,255,255,0.7)'
+                  color: getColor('subtitle-text') || 'rgba(255,255,255,0.7)',
+                  ...getFullTextStyle(customization, 'subtitle-text'),
                 }}
               >
                 {subtitle}

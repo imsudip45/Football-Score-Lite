@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useGraphicsCustomizationStore } from '@/lib/graphics-customization-store';
-import { getTextColor, getPatternStyleWithAnimation, getPatternAnimationCSS } from './customization-utils';
+import { getTextColor, getPatternStyleWithAnimation, getPatternAnimationCSS, getFullTextStyle } from './customization-utils';
 
 // NSL Color Palette
 const NSL_COLORS = {
@@ -125,7 +125,10 @@ const SubstitutionOverlay: React.FC<SubstitutionOverlayProps> = ({
             ></div>
             <span 
               className="font-condensed text-2xl tracking-wide uppercase pt-1"
-              style={{ color: getColor('player-in') || '#111827' }}
+              style={{
+                color: getColor('player-in') || '#111827',
+                ...getFullTextStyle(customization, 'player-in'),
+              }}
             >
               {playerIn || 'Player In'}
             </span>
@@ -147,7 +150,10 @@ const SubstitutionOverlay: React.FC<SubstitutionOverlayProps> = ({
             ></div>
             <span 
               className="font-condensed text-2xl tracking-wide uppercase pt-1"
-              style={{ color: getColor('player-out') || '#111827' }}
+              style={{
+                color: getColor('player-out') || '#111827',
+                ...getFullTextStyle(customization, 'player-out'),
+              }}
             >
               {playerOut || 'Player Out'}
             </span>

@@ -47,6 +47,27 @@ const sanitizeForCommentatorSync = <T,>(value: T): T => {
   }
 }
 
+// Customization sync for renderer:
+// - Prefer keeping `app-assets://...` URLs (small + production-safe)
+// - Allow *small* data URLs (legacy) but clamp them to avoid oversized WS frames
+const sanitizeCustomizationForWs = <T,>(value: T): T => {
+  if (!value) return value
+  try {
+    return JSON.parse(
+      JSON.stringify(value, (_k, v) => {
+        if (typeof v === 'string') {
+          if (v.startsWith('zip://')) return ''
+          if (v.startsWith('data:')) return stripLargeDataUrl(v, 300_000)
+          if (v.length > 300_000) return ''
+        }
+        return v
+      }),
+    )
+  } catch {
+    return value
+  }
+}
+
 interface WebSocketMessage {
   type: string
   graphic?: any
@@ -548,7 +569,7 @@ export function useWebSocket() {
         tournamentColor: currentMatch?.tournamentColor || '#EF3E42', // Use tournament color if available
       },
       // Renderer-only: customization snapshot (no functions, no huge strings)
-      customization: sanitizeForCommentatorSync(customizationState),
+      customization: sanitizeCustomizationForWs(customizationState),
     }
 
     // Send state update via WebSocket (using sendMessage for queuing)

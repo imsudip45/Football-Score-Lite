@@ -264,6 +264,7 @@ interface GraphicsCustomizationState {
   updateGraphicPosition: (graphic: GraphicKey, position: Partial<GraphicPosition>) => void
   updateGraphicScale: (graphic: GraphicKey, scale: number) => void
   updateGraphicOpacity: (graphic: GraphicKey, opacity: number) => void
+  updateGraphicEnabled: (graphic: GraphicKey, enabled: boolean) => void
   updateComponentStyle: (graphic: GraphicKey, componentId: string, updates: Partial<ComponentStyle>) => void
   updateComponentFill: (graphic: GraphicKey, componentId: string, fill: FillConfig) => void
   resetGraphic: (graphic: GraphicKey) => void
@@ -288,7 +289,7 @@ type GraphicKey =
   | 'matchStatsFullScreen'
   | 'matchOfficials'
 
-const defaultCustomizations: Record<GraphicKey, GraphicCustomization> = {
+export const defaultCustomizations: Record<GraphicKey, GraphicCustomization> = {
   scoreBug: {
     position: { top: 64, left: 64 },
     scale: 1,
@@ -381,7 +382,8 @@ const defaultCustomizations: Record<GraphicKey, GraphicCustomization> = {
     components: defaultBreakingBannerComponents,
   },
   matchStats: {
-    position: { top: 0, left: 0 },
+    // Match Stats Lower Third is centered; store `left` as the center X (px).
+    position: { top: 0, left: 960, bottom: 64 },
     scale: 1,
     opacity: 1,
     enabled: true,
@@ -429,6 +431,14 @@ export const useGraphicsCustomizationStore = create<GraphicsCustomizationState>(
           [graphic]: {
             ...state[graphic],
             opacity,
+          },
+        })),
+
+      updateGraphicEnabled: (graphic, enabled) =>
+        set((state) => ({
+          [graphic]: {
+            ...state[graphic],
+            enabled,
           },
         })),
 
@@ -484,6 +494,143 @@ export const useGraphicsCustomizationStore = create<GraphicsCustomizationState>(
     }
   )
 )
+
+function hashString(input: string): string {
+  // Simple, stable hash for filenames (not crypto; just dedupe).
+  let hash = 5381
+  for (let i = 0; i < input.length; i++) {
+    hash = ((hash << 5) + hash) ^ input.charCodeAt(i)
+  }
+  return (hash >>> 0).toString(16)
+}
+
+function guessExtFromDataUrl(dataUrl: string): string {
+  const mime = /^data:([^;]+);base64,/i.exec(dataUrl || '')?.[1] || ''
+  if (mime.includes('png')) return 'png'
+  if (mime.includes('jpeg') || mime.includes('jpg')) return 'jpg'
+  if (mime.includes('gif')) return 'gif'
+  if (mime.includes('webp')) return 'webp'
+  return 'png'
+}
+
+// One-time migration: convert legacy `data:` custom pattern URLs to `app-assets://...` URLs in Electron.
+// This keeps customization sync small and makes packaged builds work without re-uploading.
+export async function migrateLegacyPatternDataUrlsToAssets(): Promise<{ migrated: number }> {
+  if (typeof window === 'undefined') return { migrated: 0 }
+
+  const markerKey = 'localmatch-graphics-customization-pattern-migration-v1'
+  const api = (window as any).electronAPI
+  if (!api?.assets?.writeDataUrl) {
+    // Not running in Electron; nothing to do.
+    localStorage.setItem(markerKey, `done:${Date.now()}`)
+    return { migrated: 0 }
+  }
+
+  // Ensure we have the latest persisted state.
+  try {
+    ;(useGraphicsCustomizationStore as any).persist?.rehydrate?.()
+  } catch {
+    // ignore
+  }
+
+  const current = (useGraphicsCustomizationStore as any).getState?.() as GraphicsCustomizationState
+  if (!current) {
+    localStorage.setItem(markerKey, `done:${Date.now()}`)
+    return { migrated: 0 }
+  }
+
+  // If we've already migrated and there are no legacy data URLs left, skip.
+  const already = localStorage.getItem(markerKey)
+  let hasLegacy = false
+  const quickKeys = Object.keys(defaultCustomizations) as GraphicKey[]
+  for (const g of quickKeys) {
+    const graphic: any = (current as any)[g]
+    const comps: any[] = graphic?.components
+    if (!Array.isArray(comps)) continue
+    if (comps.some((c) => c?.fill?.pattern?.type === 'custom' && typeof c?.fill?.pattern?.customUrl === 'string' && c.fill.pattern.customUrl.startsWith('data:'))) {
+      hasLegacy = true
+      break
+    }
+  }
+  if (!hasLegacy && already?.startsWith('done:')) {
+    return { migrated: 0 }
+  }
+
+  const cache = new Map<string, string>()
+  let migrated = 0
+
+  const patch: Partial<GraphicsCustomizationState> = {}
+  const graphicKeys = Object.keys(defaultCustomizations) as GraphicKey[]
+
+  for (const g of graphicKeys) {
+    const graphic: any = (current as any)[g]
+    if (!graphic?.components || !Array.isArray(graphic.components)) continue
+
+    let changedGraphic = false
+    const nextComponents = graphic.components.map((comp: any) => {
+      const pattern = comp?.fill?.pattern
+      const customUrl = pattern?.type === 'custom' ? pattern?.customUrl : undefined
+      if (typeof customUrl === 'string' && customUrl.startsWith('data:')) {
+        changedGraphic = true
+        return { ...comp } // we'll patch below
+      }
+      return comp
+    })
+
+    if (!changedGraphic) continue
+
+    for (let i = 0; i < nextComponents.length; i++) {
+      const comp = nextComponents[i]
+      const pattern = comp?.fill?.pattern
+      const customUrl = pattern?.type === 'custom' ? pattern?.customUrl : undefined
+      if (typeof customUrl !== 'string' || !customUrl.startsWith('data:')) continue
+
+      const existing = cache.get(customUrl)
+      let newUrl = existing
+      if (!newUrl) {
+        const ext = guessExtFromDataUrl(customUrl)
+        const relPath = `patterns/legacy-${hashString(customUrl)}.${ext}`
+        try {
+          const res = await api.assets.writeDataUrl(relPath, customUrl)
+          if (res?.success && res.url) {
+            newUrl = res.url
+            cache.set(customUrl, newUrl)
+          }
+        } catch {
+          // keep as-is
+        }
+      }
+
+      if (newUrl && newUrl !== customUrl) {
+        migrated++
+        nextComponents[i] = {
+          ...comp,
+          fill: {
+            ...comp.fill,
+            pattern: {
+              ...pattern,
+              customUrl: newUrl,
+            },
+          },
+        }
+      }
+    }
+
+    ;(patch as any)[g] = { ...graphic, components: nextComponents }
+  }
+
+  if (migrated > 0) {
+    try {
+      // Merge patch; do NOT replace store (replacing would drop action functions).
+      ;(useGraphicsCustomizationStore as any).setState?.(patch)
+    } catch {
+      // ignore
+    }
+  }
+
+  localStorage.setItem(markerKey, `done:${Date.now()}`)
+  return { migrated }
+}
 
 // BroadcastChannel for same-origin cross-tab communication
 let broadcastChannel: BroadcastChannel | null = null;

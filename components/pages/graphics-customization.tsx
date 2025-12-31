@@ -29,6 +29,7 @@ import { toast } from "sonner"
 import { 
   useGraphicsCustomizationStore, 
   triggerGraphicsSync,
+  migrateLegacyPatternDataUrlsToAssets,
   type ComponentStyle, 
   type FillConfig,
   type GradientStop,
@@ -309,6 +310,22 @@ function PatternEditor({
 }) {
   const pattern = fill.pattern || { enabled: true, type: 'stripes' as const, color: '#ffffff', opacity: 0.2, size: 20, angle: 45 }
 
+  const savePatternImageIfElectron = async (dataUrl: string, file?: File): Promise<string> => {
+    try {
+      const api = (typeof window !== 'undefined' ? (window as any).electronAPI : undefined)
+      if (!api?.assets?.writeDataUrl) return dataUrl
+
+      const mime = /^data:([^;]+);base64,/i.exec(dataUrl)?.[1] || file?.type || ''
+      const ext = mime.includes('png') ? 'png' : mime.includes('jpeg') ? 'jpg' : mime.includes('gif') ? 'gif' : 'png'
+      const relPath = `patterns/custom-${Date.now()}-${Math.random().toString(16).slice(2)}.${ext}`
+      const res = await api.assets.writeDataUrl(relPath, dataUrl)
+      if (res?.success && res.url) return res.url
+      return dataUrl
+    } catch {
+      return dataUrl
+    }
+  }
+
   const updatePattern = (updates: Partial<typeof pattern>) => {
     onChange({
       ...fill,
@@ -419,9 +436,10 @@ function PatternEditor({
                 const file = e.target.files?.[0]
                 if (file) {
                   const reader = new FileReader()
-                  reader.onload = (event) => {
+                  reader.onload = async (event) => {
                     const dataUrl = event.target?.result as string
-                    updatePattern({ customUrl: dataUrl })
+                    const storedUrl = await savePatternImageIfElectron(dataUrl, file)
+                    updatePattern({ customUrl: storedUrl })
                   }
                   reader.readAsDataURL(file)
                 }
@@ -943,6 +961,7 @@ export function GraphicsCustomization() {
             if (graphic.position) store.updateGraphicPosition(key, graphic.position)
             if (graphic.scale !== undefined) store.updateGraphicScale(key, graphic.scale)
             if (graphic.opacity !== undefined) store.updateGraphicOpacity(key, graphic.opacity)
+            if (graphic.enabled !== undefined) store.updateGraphicEnabled(key, !!graphic.enabled)
             if (graphic.components) {
               graphic.components.forEach((comp: ComponentStyle) => {
                 store.updateComponentStyle(key, comp.id, comp)
@@ -950,7 +969,10 @@ export function GraphicsCustomization() {
             }
           }
         })
-        
+
+        // If imported config contains legacy `data:` custom patterns, convert them to `app-assets://...` immediately.
+        await migrateLegacyPatternDataUrlsToAssets()
+
         triggerGraphicsSync()
         toast.success('Graphics configuration imported and synced')
       } catch {
