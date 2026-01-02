@@ -422,7 +422,6 @@ export function getPatternStyleWithAnimation(customization: any, id: string, tea
     if (baseStyle.background && !baseStyle.backgroundColor && !baseStyle.backgroundImage) {
       animatedStyle.background = baseStyle.background;
     }
-    
     return animatedStyle;
   }
   
