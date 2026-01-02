@@ -221,9 +221,16 @@ export default function RendererPage() {
   const applyCustomizationFromWs = useCallback((incoming: any) => {
     if (!incoming) return;
     try {
-      const version = (useGraphicsCustomizationStore as any).persist?.getOptions?.().version ?? 23;
+      const storeAny = useGraphicsCustomizationStore as any;
+
+      // Apply immediately (do not rely solely on localStorage, which may behave differently across
+      // Electron/file:// and OBS Browser Source). Use merge mode so action functions remain.
+      storeAny.setState?.(incoming, false);
+
+      // Also persist so the renderer stays consistent across reloads.
+      const version = storeAny.persist?.getOptions?.().version ?? 24;
       localStorage.setItem('localmatch-graphics-customization', JSON.stringify({ state: incoming, version }));
-      (useGraphicsCustomizationStore as any).persist?.rehydrate?.();
+      storeAny.persist?.rehydrate?.();
     } catch (e) {
       console.warn('[Renderer] Failed to apply customization from WS:', e);
     }
@@ -443,7 +450,16 @@ export default function RendererPage() {
     >
       {/* Score Bug - Top Left */}
       {shouldRender('scoreBug') && (
-        <div className="absolute top-12 left-16 z-50" style={{ overflow: 'visible', minWidth: '800px', position: 'relative' }}>
+        <div
+          className="absolute z-50"
+          style={{
+            top: 70,
+            left: 64,
+            overflow: 'visible',
+            minWidth: '800px',
+            position: 'relative',
+          }}
+        >
           <LiveScoreBug 
             animate={getAnimateState('scoreBug')}
             homeTeam={{

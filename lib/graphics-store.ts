@@ -325,6 +325,7 @@ interface GraphicsState {
   lineupTeam: 'home' | 'away' | null
   matchStatsLowerThirdVisible: boolean
   matchStatsFullScreenVisible: boolean
+  matchStatsSummaryFullScreenVisible: boolean
   matchOfficialsVisible: boolean
 
   // Actions
@@ -378,6 +379,7 @@ interface GraphicsState {
   toggleLineup: (visible: boolean, team?: 'home' | 'away') => void
   toggleMatchStatsLowerThird: (visible: boolean) => void
   toggleMatchStatsFullScreen: (visible: boolean) => void
+  toggleMatchStatsSummaryFullScreen: (visible: boolean) => void
   toggleMatchOfficials: (visible: boolean) => void
 
   // Reset
@@ -408,6 +410,7 @@ export const useGraphicsStore = create<GraphicsState>()(
       lineupTeam: null,
       matchStatsLowerThirdVisible: false,
       matchStatsFullScreenVisible: false,
+      matchStatsSummaryFullScreenVisible: false,
       matchOfficialsVisible: false,
 
       setActivePreset: (preset) => set({ activePreset: preset }),
@@ -610,6 +613,7 @@ export const useGraphicsStore = create<GraphicsState>()(
         }
       },
       toggleMatchStatsFullScreen: (visible) => set({ matchStatsFullScreenVisible: visible }),
+      toggleMatchStatsSummaryFullScreen: (visible) => set({ matchStatsSummaryFullScreenVisible: visible }),
       toggleMatchOfficials: (visible) => set({ matchOfficialsVisible: visible }),
 
       resetToDefault: () => set({ activePreset: defaultPreset }),
@@ -642,6 +646,7 @@ export const useGraphicsStore = create<GraphicsState>()(
             lineupVisible: false,
             matchStatsLowerThirdVisible: false,
             matchStatsFullScreenVisible: false,
+            matchStatsSummaryFullScreenVisible: false,
             matchOfficialsVisible: false,
           }
         }

@@ -456,9 +456,10 @@ export async function addPlayer(teamId: string, player: Player): Promise<void> {
   await database.players.add(dbPlayer)
 }
 
-export async function addPlayersFromCSV(teamId: string, players: Player[]): Promise<number> {
+export async function addPlayersFromCSV(teamId: string, players: Player[]): Promise<{ count: number; errors: string[] }> {
   const database = getDB()
   let count = 0
+  const errors: string[] = []
 
   for (const player of players) {
     try {
@@ -484,11 +485,13 @@ export async function addPlayersFromCSV(teamId: string, players: Player[]): Prom
       await database.players.put(dbPlayer)
       count++
     } catch (e) {
+      const errorMsg = `Failed to add player "${player.name}": ${e instanceof Error ? e.message : 'Unknown error'}`
       console.error("Error adding player:", player.name, e)
+      errors.push(errorMsg)
     }
   }
 
-  return count
+  return { count, errors }
 }
 
 export async function updatePlayer(id: string, updates: Partial<Player>): Promise<void> {
@@ -575,9 +578,10 @@ export async function getOfficials(tournamentId?: string): Promise<Official[]> {
   }))
 }
 
-export async function addOfficialsFromCSV(officials: Official[]): Promise<number> {
+export async function addOfficialsFromCSV(officials: Official[]): Promise<{ count: number; errors: string[] }> {
   const database = getDB()
   let count = 0
+  const errors: string[] = []
 
   for (const official of officials) {
     try {
@@ -595,11 +599,13 @@ export async function addOfficialsFromCSV(officials: Official[]): Promise<number
       await database.officials.add(dbOfficial)
       count++
     } catch (e) {
+      const errorMsg = `Failed to add official "${official.name}": ${e instanceof Error ? e.message : 'Unknown error'}`
       console.error("Error adding official:", official.name, e)
+      errors.push(errorMsg)
     }
   }
 
-  return count
+  return { count, errors }
 }
 
 export async function deleteOfficial(id: string): Promise<void> {
@@ -734,6 +740,18 @@ export async function getMatches(tournamentId?: string): Promise<Match[]> {
       awayTeam,
       homeScore: m.homeScore,
       awayScore: m.awayScore,
+      homeFouls: 0,
+      awayFouls: 0,
+      homeShots: 0,
+      awayShots: 0,
+      homeShotsOnTarget: 0,
+      awayShotsOnTarget: 0,
+      homePossession: 50,
+      awayPossession: 50,
+      homeOffsides: 0,
+      awayOffsides: 0,
+      homeCorners: 0,
+      awayCorners: 0,
       period: m.period as Match["period"],
       periodLength: m.periodLength,
       stoppageTime: m.stoppageTime,
@@ -831,6 +849,18 @@ export async function getInterruptedMatches(): Promise<Match[]> {
       awayTeam,
       homeScore: m.homeScore,
       awayScore: m.awayScore,
+      homeFouls: 0,
+      awayFouls: 0,
+      homeShots: 0,
+      awayShots: 0,
+      homeShotsOnTarget: 0,
+      awayShotsOnTarget: 0,
+      homePossession: 50,
+      awayPossession: 50,
+      homeOffsides: 0,
+      awayOffsides: 0,
+      homeCorners: 0,
+      awayCorners: 0,
       period: m.period as Match["period"],
       periodLength: m.periodLength,
       stoppageTime: m.stoppageTime,

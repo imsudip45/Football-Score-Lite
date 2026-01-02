@@ -2,6 +2,7 @@
 
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
+import { toast } from "sonner"
 import type {
   Match,
   NavigationPage,
@@ -200,7 +201,15 @@ export const useAppStore = create<AppState>()(
         // Auto-save score and period changes to database
         if (typeof window !== 'undefined' && (updates.homeScore !== undefined || updates.awayScore !== undefined || updates.period !== undefined || updates.status !== undefined)) {
           import('./database').then(({ updateMatch: dbUpdateMatch }) => {
-            dbUpdateMatch(currentMatch.id, updates).catch(console.error)
+            dbUpdateMatch(currentMatch.id, updates).catch((error) => {
+              console.error('[Store] Failed to save match update:', error)
+              toast.error('Failed to save changes', {
+                description: 'Your changes may not be persisted. Please try again.',
+                duration: 5000,
+              })
+            })
+          }).catch((error) => {
+            console.error('[Store] Failed to load database module:', error)
           })
         }
       },
@@ -353,7 +362,15 @@ export const useAppStore = create<AppState>()(
         // Auto-save to database
         if (typeof window !== 'undefined') {
           import('./database').then(({ updateMatch }) => {
-            updateMatch(currentMatch.id, { events: updatedMatch.events }).catch(console.error)
+            updateMatch(currentMatch.id, { events: updatedMatch.events }).catch((error) => {
+              console.error('[Store] Failed to save event:', error)
+              toast.error('Failed to save event', {
+                description: 'The event was recorded locally but may not be persisted.',
+                duration: 5000,
+              })
+            })
+          }).catch((error) => {
+            console.error('[Store] Failed to load database module:', error)
           })
         }
       },
@@ -390,7 +407,15 @@ export const useAppStore = create<AppState>()(
             updateMatch(currentMatch.id, { 
               events: updatedMatch.events,
               ...scoreUpdates
-            }).catch(console.error)
+            }).catch((error) => {
+              console.error('[Store] Failed to save event removal:', error)
+              toast.error('Failed to save changes', {
+                description: 'The event was removed locally but may not be persisted.',
+                duration: 5000,
+              })
+            })
+          }).catch((error) => {
+            console.error('[Store] Failed to load database module:', error)
           })
         }
       },
@@ -406,7 +431,15 @@ export const useAppStore = create<AppState>()(
         // Auto-save to database
         if (typeof window !== 'undefined') {
           import('./database').then(({ updateMatch }) => {
-            updateMatch(currentMatch.id, { events: updatedMatch.events }).catch(console.error)
+            updateMatch(currentMatch.id, { events: updatedMatch.events }).catch((error) => {
+              console.error('[Store] Failed to save event update:', error)
+              toast.error('Failed to save changes', {
+                description: 'The event was updated locally but may not be persisted.',
+                duration: 5000,
+              })
+            })
+          }).catch((error) => {
+            console.error('[Store] Failed to load database module:', error)
           })
         }
       },
@@ -593,7 +626,7 @@ export const useAppStore = create<AppState>()(
 
       // Settings
       settings: {
-        storagePath: "/Users/operator/LocalMatchPro/data",
+        storagePath: "", // Will be set by Electron's app.getPath('userData') at runtime
         autosaveInterval: 30,
         obsHost: "localhost",
         obsPort: 3001,

@@ -205,10 +205,14 @@ export function LineupSetup() {
     }
     
     return () => {
+      // Flush pending save on unmount to prevent data loss
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current)
+        // Perform immediate save on unmount
+        saveLineupToDatabase()
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [homeLineup, homeSubs, awayLineup, awaySubs, homeFormation, awayFormation, matchOfficials, triggerAutoSave, selectedFixture])
 
   const roleLabels: Record<Official["role"], string> = {

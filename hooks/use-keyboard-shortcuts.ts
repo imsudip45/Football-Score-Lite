@@ -24,7 +24,7 @@ export function useKeyboardShortcuts() {
       if (isMod && e.key === "n") {
         e.preventDefault()
         createNewMatch()
-        setCurrentPage("match-setup")
+        setCurrentPage("fixtures")
       }
 
       // Ctrl/Cmd + S - Save (placeholder)

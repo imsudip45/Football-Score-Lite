@@ -125,7 +125,7 @@ function ColorPicker({
         {onTeamColorChange && (
           <Select 
             value={useTeamColor || 'custom'} 
-            onValueChange={(v) => onTeamColorChange(v === 'custom' ? null : v as typeof useTeamColor)}
+            onValueChange={(v) => onTeamColorChange(v === 'custom' ? null : v as "team1" | "team2" | "home1" | "home2" | "away1" | "away2" | "tournament")}
           >
             <SelectTrigger className="h-8 w-44">
               <SelectValue placeholder="Select color type" />

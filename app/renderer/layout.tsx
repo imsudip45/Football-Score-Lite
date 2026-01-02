@@ -1,3 +1,5 @@
+import './renderer.css';
+
 export default function RendererLayout({
   children,
 }: {

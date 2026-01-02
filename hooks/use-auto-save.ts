@@ -301,18 +301,35 @@ export function useAutoSave(config: Partial<AutoSaveConfig> = {}): AutoSaveResul
   }, [enabled, currentMatch?.status, currentMatch?.period, debouncedSave])
 
   /**
-   * Cleanup effect: Clear all timeouts on unmount
+   * Cleanup effect: Clear all timeouts on unmount and flush pending saves
    */
   useEffect(() => {
     return () => {
+      // Flush any pending debounced save before unmount
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current)
+        debounceTimeoutRef.current = null
+        // Perform a final synchronous-ish save attempt
+        // Note: This is best-effort since we're unmounting
+        if (currentMatch && currentMatch.status === "live") {
+          const matchState: Match = {
+            ...currentMatch,
+            matchTime,
+            timerRunning,
+            possession,
+          }
+          // Fire and forget - we can't await in cleanup
+          saveMatchState(matchState).catch((error) => {
+            console.error("[useAutoSave] Failed to flush pending save on unmount:", error)
+          })
+        }
       }
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
+        intervalRef.current = null
       }
     }
-  }, [])
+  }, [currentMatch, matchTime, timerRunning, possession])
 
   return {
     lastSaved,

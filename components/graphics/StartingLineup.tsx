@@ -88,11 +88,39 @@ const getDisplayName = (name: string, shortName?: string): { firstName: string; 
   return { firstName, lastName };
 };
 
+// Calculate font size to fit name within available width
+// Base font size is 28px, available width ~100px (after padding)
+const getScaledFontSize = (text: string, baseFontSize: number = 28, maxWidth: number = 100): { fontSize: number; scaleX: number } => {
+  // Approximate character width ratio for condensed font
+  const charWidthRatio = 0.48;
+  const estimatedWidth = text.length * baseFontSize * charWidthRatio;
+  
+  if (estimatedWidth <= maxWidth) {
+    return { fontSize: baseFontSize, scaleX: 1 };
+  }
+  
+  // For long names, keep font size readable (min 20px) and use scaleX to compress
+  const minFontSize = 20;
+  let fontSize = Math.floor((maxWidth / estimatedWidth) * baseFontSize);
+  
+  if (fontSize >= minFontSize) {
+    return { fontSize, scaleX: 1 };
+  }
+  
+  // If font would be too small, use minFontSize with horizontal compression
+  fontSize = minFontSize;
+  const newEstimatedWidth = text.length * fontSize * charWidthRatio;
+  const scaleX = Math.max(0.7, maxWidth / newEstimatedWidth); // Don't compress more than 70%
+  
+  return { fontSize, scaleX };
+};
+
 const DraggablePlayerCard: React.FC<PlayerCardProps> = ({ 
   name, shortName, number, top, left, photo, className, style, teamColor, debugMode, index, onPositionChange, containerRef,
   numberBgColor, numberTextColor, infoBgColor, nameTextColor
 }) => {
   const { firstName, lastName } = getDisplayName(name, shortName);
+  const { fontSize: lastNameFontSize, scaleX: lastNameScaleX } = getScaledFontSize(lastName.toUpperCase());
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ top, left });
   const cardRef = useRef<HTMLDivElement>(null);
@@ -181,8 +209,14 @@ const DraggablePlayerCard: React.FC<PlayerCardProps> = ({
             </span>
           )}
           <span 
-            className="font-condensed text-[28px] uppercase tracking-tight truncate w-full block -mt-1"
-            style={{ color: nameTextColor || '#000000' }}
+            className="font-condensed uppercase tracking-tight w-full block -mt-1"
+            style={{ 
+              color: nameTextColor || '#000000',
+              fontSize: `${lastNameFontSize}px`,
+              lineHeight: 1.1,
+              transform: lastNameScaleX < 1 ? `scaleX(${lastNameScaleX})` : undefined,
+              transformOrigin: 'left center'
+            }}
           >
             {lastName}
           </span>
@@ -367,8 +401,13 @@ const StartingLineup: React.FC<StartingLineupProps> = ({
       {/* Center Pitch */}
       <div 
         className={`flex-1 relative z-10 ${animate === 'in' ? 'anim-pitch-in' : 'anim-pitch-out'}`}
-        style={Object.keys(getStyle('pitch-background')).length > 0 ? getStyle('pitch-background') : { backgroundColor: '#EBEBEB' }}
+        style={{ backgroundColor: '#EBEBEB' }}
       >
+        {/* Pattern background layer - separate from entrance animation */}
+        <div 
+          className="absolute inset-0 z-0"
+          style={Object.keys(getStyle('pitch-background')).length > 0 ? getStyle('pitch-background') : {}}
+        />
         <PitchGraphic />
         <div ref={pitchRef} className="absolute inset-0 z-10">
           {players.map((p, i) => (

@@ -1,0 +1,9 @@
+/* Renderer-only CSS overrides.
+
+   Keep output pixel-perfect at 1920x1080.
+   app/globals.css bumps html font-size to 18px at >=1920px, which can scale
+   rem-based graphics and cause edge clipping in OBS Browser Source.
+*/
+html {
+  font-size: 16px !important;
+}

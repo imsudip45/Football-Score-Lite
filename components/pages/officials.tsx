@@ -204,13 +204,18 @@ export function Officials() {
         return
       }
 
-      const count = await db.addOfficialsFromCSV(newOfficials)
+      const result = await db.addOfficialsFromCSV(newOfficials)
       setOfficials(prev => [...prev, ...newOfficials])
       newOfficials.forEach(o => addOfficial(o))
       
       setCsvImportOpen(false)
       setCsvContent("")
-      toast.success(`Imported ${count} officials`)
+      if (result.errors.length > 0) {
+        toast.warning(`Imported ${result.count} officials with ${result.errors.length} errors`)
+        console.warn("CSV import errors:", result.errors)
+      } else {
+        toast.success(`Imported ${result.count} officials`)
+      }
     } catch (error) {
       console.error("CSV import error:", error)
       toast.error("Failed to import CSV")

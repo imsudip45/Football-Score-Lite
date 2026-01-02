@@ -277,8 +277,10 @@ export type NavigationPage =
   | "fixtures"
   | "lineup-setup"
   | "live-control"
+  | "football-graphics"
   | "graphics"
   | "graphics-customization"
+  | "graphics-output"
   | "assets"
   | "settings"
 

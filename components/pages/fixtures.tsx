@@ -59,7 +59,13 @@ export function Fixtures() {
   const homeTeam = teams.find(t => t.id === homeTeamId)
   const awayTeam = teams.find(t => t.id === awayTeamId)
 
-  useEffect(() => { loadData() }, [selectedTournamentId])
+  useEffect(() => { 
+    // Only load data if dialogs are not open to prevent input focus issues
+    if (!showFixtureForm && !addOfficialOpen && !editOfficialOpen) {
+      loadData() 
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTournamentId]) // Intentionally not including dialog states to prevent reload loops
 
   const loadData = async () => {
     setLoading(true)
@@ -234,11 +240,16 @@ export function Fixtures() {
       const rows = parseCSV<any>(csvContent)
       const newOfficials = csvToOfficials(rows)
       if (newOfficials.length === 0) { toast.error("No valid officials found in CSV"); return }
-      const count = await db.addOfficialsFromCSV(newOfficials)
+      const result = await db.addOfficialsFromCSV(newOfficials)
       setOfficials(prev => [...prev, ...newOfficials])
       newOfficials.forEach(o => addOfficial(o))
       setCsvImportOpen(false); setCsvContent("")
-      toast.success(`Imported ${count} officials`)
+      if (result.errors.length > 0) {
+        toast.warning(`Imported ${result.count} officials with ${result.errors.length} errors`)
+        console.warn("CSV import errors:", result.errors)
+      } else {
+        toast.success(`Imported ${result.count} officials`)
+      }
     } catch (error) { toast.error("Failed to import CSV") }
   }
 

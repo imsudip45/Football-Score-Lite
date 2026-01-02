@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, protocol } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, protocol, session } from 'electron'
 import { join, normalize, sep } from 'path'
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
@@ -52,6 +52,7 @@ function createRendererWindow(type: string, url: string) {
   const window = new BrowserWindow({
     width: 1920,
     height: 1080,
+    useContentSize: true,
     title: `Renderer: ${type}`,
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
@@ -60,22 +61,65 @@ function createRendererWindow(type: string, url: string) {
     },
     backgroundColor: '#000000',
     show: false,
-    frame: true,
+    frame: false,
+    autoHideMenuBar: true,
+    resizable: false,
+    fullscreenable: false,
     alwaysOnTop: false,
   })
 
+  window.setMenuBarVisibility(false)
+
   window.loadURL(url)
 
-  // Ensure consistent layout scaling (prevents intermittent clipping that can change after DevTools toggles).
-  window.webContents.on('did-finish-load', () => {
+  let beforeInputHooked = false
+
+  const enforceRendererView = () => {
     try {
+      // Keep the capture surface deterministic.
+      // Fullscreen/maximize can change device scale behavior; always force zoom back to 1.
+      // (setZoomLevel(0) is "100%"; factor is also set for safety.)
+      ;(window.webContents as any).setZoomLevel?.(0)
       window.webContents.setZoomFactor(1)
-      // Lock zoom to avoid OS/gesture zoom affecting fixed 1920x1080 layouts.
       ;(window.webContents as any).setVisualZoomLevelLimits?.(1, 1)?.catch?.(() => {})
+
+      // Prevent Ctrl+wheel / Ctrl+0 etc from changing zoom.
+      // (Some Chromium paths can still adjust zoom even with visual limits.)
+      if (!beforeInputHooked) {
+        beforeInputHooked = true
+        window.webContents.on('before-input-event', (event, input) => {
+          const isZoomKey =
+            (input.control || input.meta) &&
+            (input.key === '+' || input.key === '-' || input.key === '=' || input.key === '0')
+          const isZoomWheel = (input.control || input.meta) && input.type === 'mouseWheel'
+          if (isZoomKey || isZoomWheel) {
+            event.preventDefault()
+          }
+        })
+      }
+
+      // When not fullscreen, keep a true 1920x1080 content area.
+      if (!window.isFullScreen()) {
+        window.setContentSize(1920, 1080)
+      }
     } catch {
       // ignore
     }
+  }
+
+  // Ensure consistent layout scaling (prevents intermittent clipping that can change after DevTools toggles).
+  window.webContents.on('did-finish-load', () => {
+    enforceRendererView()
   })
+
+  // Fullscreen (F11 / HTML fullscreen) can cause zoom/device-scale changes → clipping.
+  window.on('enter-full-screen', enforceRendererView)
+  window.on('leave-full-screen', enforceRendererView)
+  window.on('maximize', enforceRendererView)
+  window.on('unmaximize', enforceRendererView)
+  window.on('resize', enforceRendererView)
+  window.webContents.on('enter-html-full-screen', enforceRendererView)
+  window.webContents.on('leave-html-full-screen', enforceRendererView)
 
   window.once('ready-to-show', () => {
     window.show()
@@ -100,15 +144,10 @@ function createMainWindow() {
       preload: join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      // Enable better rendering for dropdowns and overlays
-      enableBlinkFeatures: 'CSSColorSchemeUARendering',
-      // Ensure proper event handling for overlays and dropdowns
-      webSecurity: false, // Allow loading local files
       offscreen: false,
     },
     backgroundColor: '#0d1117',
     show: false,
-    // Ensure proper layering for dropdowns
     transparent: false,
   })
 
@@ -153,15 +192,26 @@ function createMainWindow() {
 
 // IPC Handlers
 function setupIpcHandlers() {
-  // File operations
-  ipcMain.handle('file:save', async (_event, path: string, data: string) => {
+  // File operations - restricted to userData directory for security
+  ipcMain.handle('file:save', async (_event, relPath: string, data: string) => {
     try {
-      const dir = join(path, '..')
+      const safePath = join(app.getPath('userData'), sanitizeRelativePath(relPath))
+      const dir = join(safePath, '..')
       if (!existsSync(dir)) {
         await mkdir(dir, { recursive: true })
       }
-      await writeFile(path, data, 'utf-8')
+      await writeFile(safePath, data, 'utf-8')
       return { success: true }
+    } catch (error) {
+      return { success: false, error: String(error) }
+    }
+  })
+
+  ipcMain.handle('file:load', async (_event, relPath: string) => {
+    try {
+      const safePath = join(app.getPath('userData'), sanitizeRelativePath(relPath))
+      const data = await readFile(safePath, 'utf-8')
+      return { success: true, data }
     } catch (error) {
       return { success: false, error: String(error) }
     }
@@ -199,15 +249,6 @@ function setupIpcHandlers() {
       const absPath = join(getAssetsDir(), safeRel)
       const buf = await readFile(absPath)
       return { success: true, base64: buf.toString('base64') }
-    } catch (error) {
-      return { success: false, error: String(error) }
-    }
-  })
-
-  ipcMain.handle('file:load', async (_event, path: string) => {
-    try {
-      const data = await readFile(path, 'utf-8')
-      return { success: true, data }
     } catch (error) {
       return { success: false, error: String(error) }
     }
@@ -260,6 +301,20 @@ function setupIpcHandlers() {
 
 app.whenReady().then(() => {
   try {
+    // Set Content Security Policy
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': [
+            isDev
+              ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: ws://localhost:* http://localhost:*; img-src 'self' data: blob: app-assets: https:; font-src 'self' data:; connect-src 'self' ws://localhost:* http://localhost:* ws://127.0.0.1:*"
+              : "default-src 'self' 'unsafe-inline' data: blob: file:; img-src 'self' data: blob: app-assets: file:; font-src 'self' data: file:; connect-src 'self' ws://localhost:* ws://127.0.0.1:* http://localhost:*"
+          ]
+        }
+      })
+    })
+
     // Register protocol for userData assets
     protocol.registerFileProtocol('app-assets', (request, callback) => {
       try {

@@ -73,7 +73,13 @@ export function Tournaments() {
   const playerPhotoInputRef = useRef<HTMLInputElement>(null)
   const formations = getFormationNames(sportType || 'football')
 
-  useEffect(() => { loadData() }, [selectedTournamentId])
+  useEffect(() => { 
+    // Only load data if dialogs are not open to prevent input focus issues
+    if (!createTournamentOpen && !editTournament && !createTeamOpen && !editTeam && !csvImportOpen && !addPlayerOpen && !editPlayer) {
+      loadData() 
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTournamentId]) // Intentionally not including dialog states to prevent reload loops
 
   const loadData = async () => {
     setLoading(true)
@@ -260,10 +266,15 @@ export function Tournaments() {
       const rows = parseCSV<any>(csvContent)
       const players = csvToPlayers(rows)
       if (players.length === 0) { toast.error("No valid players found in CSV"); return }
-      const count = await db.addPlayersFromCSV(selectedTeamForImport, players)
+      const result = await db.addPlayersFromCSV(selectedTeamForImport, players)
       setTeams(prev => prev.map(t => t.id === selectedTeamForImport ? { ...t, players: [...t.players, ...players] } : t))
       setCsvImportOpen(false); setCsvContent(""); setSelectedTeamForImport(null)
-      toast.success(`Imported ${count} players`)
+      if (result.errors.length > 0) {
+        toast.warning(`Imported ${result.count} players with ${result.errors.length} errors`)
+        console.warn("CSV import errors:", result.errors)
+      } else {
+        toast.success(`Imported ${result.count} players`)
+      }
     } catch (error) { toast.error("Failed to import CSV") }
   }
 

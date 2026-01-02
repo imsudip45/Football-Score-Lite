@@ -125,7 +125,7 @@ const EventOverlay: React.FC<EventOverlayProps> = ({
         <div className="flex h-14 shadow-lg w-[500px] overflow-hidden">
           <div 
             className={`w-14 flex items-center justify-center relative z-20 ${animate === 'in' ? 'anim-eo-logo-in' : 'anim-eo-logo-out'}`}
-            style={getStyle('background')}
+            style={Object.keys(getStyle('background')).length > 0 ? getStyle('background') : { backgroundColor: teamColor || NSL_COLORS.darkRed }}
           >
             {showLogo ? (
               <img src={logo} className="h-10 w-10 object-contain" alt="Team" />
@@ -140,8 +140,7 @@ const EventOverlay: React.FC<EventOverlayProps> = ({
             style={Object.keys(getStyle('accent')).length > 0 ? getStyle('accent') : { backgroundColor: tournamentColor || NSL_COLORS.red }}
           >
             <span 
-              className="font-condensed uppercase tracking-wide leading-none pt-1"
-              style={getFullTextStyle(customization, 'text')}
+              className="font-condensed text-3xl uppercase tracking-wide leading-none pt-1 text-white"
             >{mainText}</span>
           </div>
         </div>
@@ -150,10 +149,10 @@ const EventOverlay: React.FC<EventOverlayProps> = ({
       {/* Coach/Nameplate: Logo Box / Name Box / Position Box */}
       {variant === 'coach' && (
         <div className="flex h-20 shadow-xl w-[450px] overflow-hidden">
-          {/* Logo Box - uses customization, falls back to background or team color */}
+          {/* Logo Box - white for officials (neutral), team primary color for teams */}
           <div 
             className={`w-20 flex items-center justify-center relative z-20 ${animate === 'in' ? 'anim-eo-logo-in' : 'anim-eo-logo-out'}`}
-            style={Object.keys(getStyle('logo-box')).length > 0 ? getStyle('logo-box') : (Object.keys(getStyle('background')).length > 0 ? getStyle('background') : { backgroundColor: team === 'neutral' ? '#ffffff' : (teamColor || NSL_COLORS.darkRed) })}
+            style={Object.keys(getStyle('logo-box')).length > 0 ? getStyle('logo-box') : { backgroundColor: team === 'neutral' ? '#ffffff' : (teamColor || NSL_COLORS.darkRed) }}
           >
             {showLogo ? (
               <img src={logo} className="h-14 w-14 object-contain" alt="Team" />
@@ -170,8 +169,8 @@ const EventOverlay: React.FC<EventOverlayProps> = ({
               style={Object.keys(getStyle('accent')).length > 0 ? getStyle('accent') : { backgroundColor: NSL_COLORS.darkGrey }}
             >
               <span 
-                className="font-condensed font-semibold uppercase tracking-tight leading-none pt-1" 
-                style={getFullTextStyle(customization, 'name-text')}
+                className="font-condensed font-semibold text-3xl uppercase tracking-tight leading-none pt-1" 
+                style={{ color: getColor('name-text') || NSL_COLORS.darkRed, ...getFullTextStyle(customization, 'name-text') }}
               >
                 {mainText}
               </span>
@@ -185,7 +184,7 @@ const EventOverlay: React.FC<EventOverlayProps> = ({
                   ? getStyle('background') 
                   : { backgroundColor: teamColor || NSL_COLORS.red }}
             >
-              <span className="font-condensed font-semibold uppercase tracking-wider leading-none pt-0.5" style={getFullTextStyle(customization, 'position-text')}>{subText}</span>
+              <span className="font-condensed font-semibold text-lg uppercase tracking-wider leading-none pt-0.5" style={{ color: getColor('position-text') || '#ffffff', ...getFullTextStyle(customization, 'position-text') }}>{subText}</span>
             </div>
           </div>
         </div>
@@ -194,9 +193,9 @@ const EventOverlay: React.FC<EventOverlayProps> = ({
       {/* Yellow & Red Cards */}
       {(variant === 'yellow-card' || variant === 'red-card') && (
         <div className="flex h-20 shadow-xl w-[450px] overflow-hidden relative">
-          <div 
+          <div
             className={`w-20 flex items-center justify-center relative z-20 ${animate === 'in' ? 'anim-eo-logo-in' : 'anim-eo-logo-out'}`}
-            style={getStyle('background')}
+            style={Object.keys(getStyle('background')).length > 0 ? getStyle('background') : { backgroundColor: teamColor || NSL_COLORS.darkRed }}
           >
             {showLogo ? (
               <img src={logo} className="h-14 w-14 object-contain" alt="Team" />
@@ -205,38 +204,21 @@ const EventOverlay: React.FC<EventOverlayProps> = ({
                 <span className="text-white text-lg font-bold">⚽</span>
               </div>
             )}
-            <div className="absolute bottom-0 w-full h-1 bg-black/20"></div>
           </div>
-          <div 
-            className={`flex-1 flex flex-col relative z-10 ${animate === 'in' ? 'anim-eo-wipe-in' : 'anim-eo-wipe-out'}`}
-            style={{ borderBottom: `4px solid ${NSL_COLORS.blue}` }}
-          >
-            <div 
-              className="flex-1 flex items-center justify-center pl-13" 
-              style={Object.keys(getStyle('accent')).length > 0 ? getStyle('accent') : { backgroundColor: NSL_COLORS.darkGrey }}
-            >
-              <span 
-                className="font-condensed uppercase tracking-tight"
-                style={getFullTextStyle(customization, 'text')}
-              >
+
+          <div className={`flex-1 flex flex-col relative z-10 ${animate === 'in' ? 'anim-eo-wipe-in' : 'anim-eo-wipe-out'}`} style={{ borderBottom: `4px solid ${NSL_COLORS.blue}` }}>
+            <div className="flex-1 flex items-center justify-center pl-13" style={Object.keys(getStyle('accent')).length > 0 ? getStyle('accent') : { backgroundColor: NSL_COLORS.darkGrey }}>
+              <span className="font-condensed text-xl uppercase tracking-tight" style={{ color: getColor('text') || '#333333', ...getFullTextStyle(customization, 'text') }}>
                 {variant === 'yellow-card' ? 'YELLOW CARD' : 'RED CARD'}
               </span>
             </div>
+
             <div className="h-10 bg-white flex items-center justify-center pl-10">
-              <span 
-                className="font-condensed uppercase tracking-wide leading-none pt-1"
-                // Player row sits on a light background; don't reuse the header "text" color (often white).
-                // Allow an optional override via 'player-text', otherwise default to dark for readability.
-                style={getFullTextStyle(customization, 'player-text')}
-              >{mainText}</span>
+              <span className="font-condensed text-2xl uppercase tracking-wide leading-none pt-1" style={{ color: getColor('player-text') || '#111827', ...getFullTextStyle(customization, 'player-text') }}>{mainText}</span>
             </div>
+
             <div className={`absolute left-6 top-1/2 z-30 drop-shadow-md ${animate === 'in' ? 'anim-eo-card-in' : 'anim-eo-card-out'}`}>
-              <div 
-                className="w-10 h-14 rounded-[2px] border border-white/10"
-                style={{ backgroundColor: variant === 'yellow-card' 
-                  ? (getStyle('yellow-card').backgroundColor as string || NSL_COLORS.yellow) 
-                  : (getStyle('red-card').backgroundColor as string || NSL_COLORS.red) }}
-              ></div>
+              <div className="w-10 h-14 rounded-[2px] border border-white/10" style={{ backgroundColor: variant === 'yellow-card' ? (getStyle('yellow-card').backgroundColor as string || NSL_COLORS.yellow) : (getStyle('red-card').backgroundColor as string || NSL_COLORS.red) }} />
             </div>
           </div>
         </div>

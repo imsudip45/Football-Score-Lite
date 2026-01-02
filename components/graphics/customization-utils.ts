@@ -80,8 +80,11 @@ export function getFillStyle(fill: FillConfig, teamColors?: TeamColors): React.C
         return { 
           backgroundColor: baseColor,
           backgroundImage: `linear-gradient(${overlayColor}, ${overlayColor}), url(${customUrl})`,
-          backgroundSize: `100% 100%, ${size}px ${size}px`,
-          backgroundRepeat: 'no-repeat, repeat',
+          // IMPORTANT: Both layers need the same size for animation to work correctly
+          // The overlay gradient will tile seamlessly, and the pattern will animate
+          backgroundSize: `${size}px ${size}px, ${size}px ${size}px`,
+          backgroundRepeat: 'repeat, repeat',
+          backgroundPosition: '0 0, 0 0',
           '--pattern-opacity': opacity,
           '--pattern-url': `url(${customUrl})`,
           '--pattern-size': `${size}px`,
@@ -94,6 +97,7 @@ export function getFillStyle(fill: FillConfig, teamColors?: TeamColors): React.C
         backgroundImage: `url(${customUrl})`,
         backgroundSize: `${size}px ${size}px`,
         backgroundRepeat: 'repeat',
+        backgroundPosition: '0 0',
         '--pattern-opacity': opacity,
         '--pattern-url': `url(${customUrl})`,
         '--pattern-size': `${size}px`,
@@ -446,22 +450,23 @@ export function getPatternAnimationCSS(): string {
       to { background-position: var(--pattern-anim-size, 40px) 0; }
     }
     
-    /* Custom pattern animations - overlay stays fixed, pattern moves */
+    /* Custom pattern animations with opacity overlay - both layers move together */
+    /* This keeps the overlay in sync with the pattern for seamless tiling */
     @keyframes patternAnimCustomUp {
       from { background-position: 0 0, 0 0; }
-      to { background-position: 0 0, 0 calc(-1 * var(--pattern-anim-size, 40px)); }
+      to { background-position: 0 calc(-1 * var(--pattern-anim-size, 40px)), 0 calc(-1 * var(--pattern-anim-size, 40px)); }
     }
     @keyframes patternAnimCustomDown {
       from { background-position: 0 0, 0 0; }
-      to { background-position: 0 0, 0 var(--pattern-anim-size, 40px); }
+      to { background-position: 0 var(--pattern-anim-size, 40px), 0 var(--pattern-anim-size, 40px); }
     }
     @keyframes patternAnimCustomLeft {
       from { background-position: 0 0, 0 0; }
-      to { background-position: 0 0, calc(-1 * var(--pattern-anim-size, 40px)) 0; }
+      to { background-position: calc(-1 * var(--pattern-anim-size, 40px)) 0, calc(-1 * var(--pattern-anim-size, 40px)) 0; }
     }
     @keyframes patternAnimCustomRight {
       from { background-position: 0 0, 0 0; }
-      to { background-position: 0 0, var(--pattern-anim-size, 40px) 0; }
+      to { background-position: var(--pattern-anim-size, 40px) 0, var(--pattern-anim-size, 40px) 0; }
     }
   `;
 }

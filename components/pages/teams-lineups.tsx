@@ -102,18 +102,22 @@ export function TeamsLineups() {
 
   // Load teams and tournament from database on mount and when tournament changes
   useEffect(() => {
-    loadTeams()
-    // Load tournament info if selected
-    if (selectedTournamentId) {
-      db.getTournament(selectedTournamentId).then(tournament => {
-        if (tournament) {
-          setSelectedTournament({ id: tournament.id, name: tournament.name, season: tournament.season })
-        }
-      })
-    } else {
-      setSelectedTournament(null)
+    // Only load data if dialogs are not open to prevent input focus issues
+    if (!createTeamOpen && !editTeam && !csvImportOpen && !addPlayerOpen && !editPlayer) {
+      loadTeams()
+      // Load tournament info if selected
+      if (selectedTournamentId) {
+        db.getTournament(selectedTournamentId).then(tournament => {
+          if (tournament) {
+            setSelectedTournament({ id: tournament.id, name: tournament.name, season: tournament.season })
+          }
+        })
+      } else {
+        setSelectedTournament(null)
+      }
     }
-  }, [selectedTournamentId])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTournamentId]) // Intentionally not including dialog states to prevent reload loops
 
   const loadTeams = async () => {
     setLoading(true)
@@ -247,7 +251,7 @@ export function TeamsLineups() {
       }
 
       // Add players to database
-      const count = await db.addPlayersFromCSV(selectedTeamForImport, players)
+      const result = await db.addPlayersFromCSV(selectedTeamForImport, players)
       
       // Update local state
       setTeams(prev => prev.map(t => 
@@ -259,7 +263,12 @@ export function TeamsLineups() {
       setCsvImportOpen(false)
       setCsvContent("")
       setSelectedTeamForImport(null)
-      toast.success(`Imported ${count} players`)
+      if (result.errors.length > 0) {
+        toast.warning(`Imported ${result.count} players with ${result.errors.length} errors`)
+        console.warn("CSV import errors:", result.errors)
+      } else {
+        toast.success(`Imported ${result.count} players`)
+      }
     } catch (error) {
       console.error("CSV import error:", error)
       toast.error("Failed to import CSV")

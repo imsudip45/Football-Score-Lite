@@ -402,8 +402,15 @@ export function LiveControl() {
                        nameplateVisible || matchStatsLowerThirdVisible || matchStatsFullScreenVisible || vsGraphicVisible || 
                        lineupVisible || matchOfficialsVisible
     
-    // Hide everything
-    if (scoreBugVisible) toggleScoreBug(false)
+    // Hide everything - use handleScoreBugToggle for proper extra time handling
+    if (scoreBugVisible) {
+      if (currentMatch?.extraTimeVisible) {
+        updateMatch({ extraTimeVisible: false })
+        setTimeout(() => toggleScoreBug(false), 500)
+      } else {
+        toggleScoreBug(false)
+      }
+    }
     if (goalVisible) toggleGoal(false)
     if (cardVisible) toggleCard(false)
     if (substitutionVisible) toggleSubstitution(false)
@@ -417,8 +424,22 @@ export function LiveControl() {
     return anyVisible
   }, [scoreBugVisible, goalVisible, cardVisible, substitutionVisible, nameplateVisible, 
       matchStatsLowerThirdVisible, matchStatsFullScreenVisible, vsGraphicVisible, lineupVisible, matchOfficialsVisible,
+      currentMatch?.extraTimeVisible, updateMatch,
       toggleScoreBug, toggleGoal, toggleCard, toggleSubstitution, toggleNameplate, 
       toggleMatchStatsLowerThird, toggleMatchStatsFullScreen, toggleVSGraphic, toggleLineup, toggleMatchOfficials])
+
+  // Custom handler for score bug toggle that handles extra time animation
+  const handleScoreBugToggle = useCallback((visible: boolean) => {
+    if (!visible && currentMatch?.extraTimeVisible) {
+      // First hide extra time, wait for animation, then hide score bug
+      updateMatch({ extraTimeVisible: false })
+      setTimeout(() => {
+        toggleScoreBug(false)
+      }, 500) // Wait for extra time out animation
+    } else {
+      toggleScoreBug(visible)
+    }
+  }, [currentMatch?.extraTimeVisible, updateMatch, toggleScoreBug])
 
   // Hide event graphics only (for mutual exclusion within Events group)
   const hideEventGraphics = useCallback(() => {
@@ -557,6 +578,7 @@ export function LiveControl() {
     const players = lineup.slice(0, 11).map((lp, i) => ({
       number: lp.player.number,
       name: lp.player.name,
+      shortName: lp.player.shortName,
       position: formationData?.positions[i] || { x: 50, y: 50 },
       photo: lp.player.photo
     }))
@@ -1838,7 +1860,7 @@ export function LiveControl() {
                     size="lg"
                     disabled={!wsConnected}
                     className={`h-10 px-5 text-sm font-semibold ${scoreBugVisible ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}
-                    onClick={() => toggleScoreBug(!scoreBugVisible)}
+                    onClick={() => handleScoreBugToggle(!scoreBugVisible)}
                   >
                     {scoreBugVisible ? 'ON' : 'OFF'}
                   </Button>

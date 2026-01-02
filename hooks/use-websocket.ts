@@ -213,9 +213,15 @@ export function useWebSocket() {
             } else if (data.type === 'PING') {
               // Respond to ping
               ws.send(JSON.stringify({ type: 'PONG' }))
+            } else if (data.type === 'error') {
+              // Server reported an error
+              console.error('[WebSocket] Server error:', data.message || 'Unknown error')
             }
           } catch (error) {
+            // Log parsing errors with more context
             console.error('[WebSocket] Error parsing message:', error)
+            console.error('[WebSocket] Raw message data:', typeof event.data === 'string' ? event.data.substring(0, 200) : 'non-string data')
+            // Don't crash - continue processing other messages
           }
         }
 

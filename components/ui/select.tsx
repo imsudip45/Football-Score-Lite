@@ -8,14 +8,9 @@ import { cn } from '@/lib/utils'
 function Select({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Root>) {
-  // Check if running in Electron
-  const isElectron = typeof window !== 'undefined' && window.electronAPI !== undefined
-  
   return (
     <SelectPrimitive.Root 
       data-slot="select" 
-      // Disable modal in Electron to prevent pointer-events issues
-      modal={isElectron ? false : true}
       {...props} 
     />
   )

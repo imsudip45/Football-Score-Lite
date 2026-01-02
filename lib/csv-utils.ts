@@ -101,8 +101,6 @@ function normalizeOfficialRole(role: string): Official['role'] {
     'ar1': 'ar1', 'assistant1': 'ar1', 'linesman1': 'ar1',
     'ar2': 'ar2', 'assistant2': 'ar2', 'linesman2': 'ar2',
     'fourth': 'fourth', '4th': 'fourth', 'fourth official': 'fourth',
-    'var': 'var', 'video': 'var',
-    'avar': 'avar', 'assistant var': 'avar',
   }
   
   return roleMap[normalized] || 'referee'

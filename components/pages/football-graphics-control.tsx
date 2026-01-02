@@ -84,7 +84,7 @@ export function FootballGraphicsControl() {
     currentMatch, wsConnected, matchTime, timerRunning, setTimerRunning, setMatchTime,
     setLastPushedGraphic, goalData, cardData, subData, nameplateData,
     setGoalData, setCardData, setSubData, setNameplateData, setLineupData, setCurrentPage,
-    settings
+    settings, updateMatch
   } = useAppStore()
 
   const {
@@ -196,7 +196,13 @@ export function FootballGraphicsControl() {
   const openControlWindow = () => window.open(controlUrl, "GraphicsControl", "width=800,height=900")
 
   const takeToBlack = () => {
-    toggleScoreBug(false)
+    // Handle extra time animation before hiding score bug
+    if (scoreBugVisible && currentMatch?.extraTimeVisible) {
+      updateMatch({ extraTimeVisible: false })
+      setTimeout(() => toggleScoreBug(false), 500)
+    } else {
+      toggleScoreBug(false)
+    }
     toggleGoal(false)
     toggleCard(false)
     toggleSubstitution(false)
@@ -227,13 +233,33 @@ export function FootballGraphicsControl() {
     toggleMatchStatsLowerThird(false)
   }, [toggleMatchStatsLowerThird])
 
+  // Custom handler for score bug toggle that handles extra time animation
+  const handleScoreBugToggle = useCallback((visible: boolean) => {
+    if (!visible && currentMatch?.extraTimeVisible) {
+      // First hide extra time, wait for animation, then hide score bug
+      updateMatch({ extraTimeVisible: false })
+      setTimeout(() => {
+        toggleScoreBug(false)
+      }, 500) // Wait for extra time out animation
+    } else {
+      toggleScoreBug(visible)
+    }
+  }, [currentMatch?.extraTimeVisible, updateMatch, toggleScoreBug])
+
   // Hide ALL graphics before showing fullscreen - returns true if any were visible
   const hideAllGraphicsForFullscreen = useCallback(() => {
     const anyVisible = scoreBugVisible || goalVisible || cardVisible || substitutionVisible || 
                        nameplateVisible || matchStatsLowerThirdVisible || matchStatsFullScreenVisible || matchStatsSummaryFullScreenVisible || vsGraphicVisible || lineupVisible
     
-    // Hide everything
-    toggleScoreBug(false)
+    // Hide everything - handle extra time for score bug
+    if (scoreBugVisible) {
+      if (currentMatch?.extraTimeVisible) {
+        updateMatch({ extraTimeVisible: false })
+        setTimeout(() => toggleScoreBug(false), 500)
+      } else {
+        toggleScoreBug(false)
+      }
+    }
     toggleGoal(false)
     toggleCard(false)
     toggleSubstitution(false)
@@ -247,6 +273,7 @@ export function FootballGraphicsControl() {
     return anyVisible
     }, [scoreBugVisible, goalVisible, cardVisible, substitutionVisible, nameplateVisible, 
       matchStatsLowerThirdVisible, matchStatsFullScreenVisible, matchStatsSummaryFullScreenVisible, vsGraphicVisible, lineupVisible,
+      currentMatch?.extraTimeVisible, updateMatch,
       toggleScoreBug, toggleGoal, toggleCard, toggleSubstitution, toggleNameplate, 
       toggleMatchStatsLowerThird, toggleMatchStatsFullScreen, toggleMatchStatsSummaryFullScreen, toggleVSGraphic, toggleLineup])
 
@@ -517,6 +544,7 @@ export function FootballGraphicsControl() {
     const players = lineup.slice(0, 11).map((lp, i) => ({
       number: lp.player.number,
       name: lp.player.name,
+      shortName: lp.player.shortName,
       position: formationData?.positions[i] || { x: 50, y: 50 },
       photo: lp.player.photo
     }))
@@ -729,7 +757,7 @@ export function FootballGraphicsControl() {
           >
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs text-muted-foreground">Show/Hide</span>
-              <Switch checked={scoreBugVisible} onCheckedChange={toggleScoreBug} />
+              <Switch checked={scoreBugVisible} onCheckedChange={handleScoreBugToggle} />
             </div>
             {currentMatch && currentMatch.homeTeam && currentMatch.awayTeam ? (
               <div className="flex items-center justify-between">

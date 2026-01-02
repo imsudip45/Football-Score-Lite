@@ -72,6 +72,12 @@ export function EventModal({ open, onOpenChange, eventType, capturedMatchTime, p
     : currentMatch?.awayBench?.map(lp => lp.player) || []
 
   const handleSubmit = () => {
+    // Validate match exists
+    if (!currentMatch) {
+      toast.error("No match loaded")
+      return
+    }
+    
     const player = players.find((p) => p.id === playerId)
     const secondPlayer = players.find((p) => p.id === secondPlayerId)
     
@@ -102,8 +108,8 @@ export function EventModal({ open, onOpenChange, eventType, capturedMatchTime, p
       
       // Set goal data and show graphic
       setGoalData({
-        playerName: player?.name || '',
-        playerNumber: String(player?.number || ''),
+        playerName: player.name || '',
+        playerNumber: String(player.number || ''),
         goalTime: formatEventTime(event, settings.timeFormat),
         isPenalty: eventType === "penalty-goal",
         isOwnGoal: false,
@@ -113,7 +119,7 @@ export function EventModal({ open, onOpenChange, eventType, capturedMatchTime, p
       toggleGoal(true)
       setTimeout(() => toggleGoal(false), 5000) // Auto-hide after 5s
       
-      toast.success(`Goal! ${player?.name || 'Unknown'} - ${selectedTeam?.shortName}`)
+      toast.success(`Goal! ${player.name || 'Unknown'} - ${selectedTeam?.shortName || 'Team'}`)
     } else if (eventType === "own-goal") {
       if (!player) {
         toast.error("Select a player for the own goal")
@@ -121,13 +127,13 @@ export function EventModal({ open, onOpenChange, eventType, capturedMatchTime, p
       }
       // Own goal adds to the opposing team - this still needs score update
       const scoreKey = team === "home" ? "awayScore" : "homeScore"
-      const currentScore = currentMatch?.[scoreKey] || 0
+      const currentScore = currentMatch[scoreKey] || 0
       updateMatch({ [scoreKey]: currentScore + 1, status: 'live' })
       
       // Set goal data and show graphic
       setGoalData({
-        playerName: player?.name || '',
-        playerNumber: String(player?.number || ''),
+        playerName: player.name || '',
+        playerNumber: String(player.number || ''),
         goalTime: formatEventTime(event, settings.timeFormat),
         isPenalty: false,
         isOwnGoal: true,
@@ -137,7 +143,7 @@ export function EventModal({ open, onOpenChange, eventType, capturedMatchTime, p
       toggleGoal(true)
       setTimeout(() => toggleGoal(false), 5000)
       
-      toast.success(`Own Goal by ${player?.name || 'Unknown'}`)
+      toast.success(`Own Goal by ${player.name || 'Unknown'}`)
     } else if (eventType === "penalty-miss") {
       // Penalty miss - no score change, just record the event
       toast.info(`Penalty Missed - ${player?.name || 'Unknown'}`)
@@ -148,13 +154,13 @@ export function EventModal({ open, onOpenChange, eventType, capturedMatchTime, p
       }
       // Auto-increment fouls when card is given
       const foulsKey = team === "home" ? "homeFouls" : "awayFouls"
-      const currentFouls = currentMatch?.[foulsKey] || 0
+      const currentFouls = currentMatch[foulsKey] || 0
       updateMatch({ [foulsKey]: currentFouls + 1 })
       
       // Set card data and show graphic
       setCardData({
-        playerName: player?.name || '',
-        playerNumber: String(player?.number || ''),
+        playerName: player.name || '',
+        playerNumber: String(player.number || ''),
         cardTime: formatEventTime(event, settings.timeFormat),
         cardType: 'yellow',
         teamColor: selectedTeam?.primaryColor || '#c8102e',
@@ -163,7 +169,7 @@ export function EventModal({ open, onOpenChange, eventType, capturedMatchTime, p
       toggleCard(true)
       setTimeout(() => toggleCard(false), 4000)
       
-      toast.success(`Yellow Card - ${player?.name || 'Unknown'}`)
+      toast.success(`Yellow Card - ${player.name || 'Unknown'}`)
     } else if (eventType === "red" || eventType === "second-yellow") {
       if (!player) {
         toast.error("Select a player for the card")
@@ -171,13 +177,13 @@ export function EventModal({ open, onOpenChange, eventType, capturedMatchTime, p
       }
       // Auto-increment fouls when card is given
       const foulsKey = team === "home" ? "homeFouls" : "awayFouls"
-      const currentFouls = currentMatch?.[foulsKey] || 0
+      const currentFouls = currentMatch[foulsKey] || 0
       updateMatch({ [foulsKey]: currentFouls + 1 })
       
       // Set card data and show graphic
       setCardData({
-        playerName: player?.name || '',
-        playerNumber: String(player?.number || ''),
+        playerName: player.name || '',
+        playerNumber: String(player.number || ''),
         cardTime: formatEventTime(event, settings.timeFormat),
         cardType: 'red',
         teamColor: selectedTeam?.primaryColor || '#c8102e',
@@ -186,13 +192,18 @@ export function EventModal({ open, onOpenChange, eventType, capturedMatchTime, p
       toggleCard(true)
       setTimeout(() => toggleCard(false), 4000)
       
-      toast.success(`${eventType === 'second-yellow' ? 'Second Yellow (Red)' : 'Red Card'} - ${player?.name || 'Unknown'}`)
+      toast.success(`${eventType === 'second-yellow' ? 'Second Yellow (Red)' : 'Red Card'} - ${player.name || 'Unknown'}`)
     } else if (eventType === "sub") {
+      // Validate match exists for substitution
+      if (!currentMatch) {
+        toast.error("No match loaded")
+        return
+      }
       // Handle multiple substitutions
       const lineupKey = team === "home" ? "homeLineup" : "awayLineup"
       const benchKey = team === "home" ? "homeBench" : "awayBench"
-      let currentLineup = [...(currentMatch?.[lineupKey] || [])]
-      let currentBench = [...(currentMatch?.[benchKey] || [])]
+      let currentLineup = [...(currentMatch[lineupKey] || [])]
+      let currentBench = [...(currentMatch[benchKey] || [])]
       
       // Process each substitution
       for (const sub of substitutions) {
@@ -253,7 +264,8 @@ export function EventModal({ open, onOpenChange, eventType, capturedMatchTime, p
         [benchKey]: currentBench
       })
     } else if (eventType === "kickoff") {
-      updateMatch({ status: 'live', period: currentMatch?.period === 'pre' ? '1st' : currentMatch?.period === 'ht' ? '2nd' : currentMatch?.period })
+      const period = currentMatch?.period
+      updateMatch({ status: 'live', period: period === 'pre' ? '1st' : period === 'ht' ? '2nd' : period })
       toast.success('Match Started!')
     } else if (eventType === "halftime") {
       updateMatch({ period: 'ht' })

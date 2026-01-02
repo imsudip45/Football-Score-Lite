@@ -80,8 +80,7 @@ const defaultScoreBugComponents: ComponentStyle[] = [
   { id: 'league-box', name: 'League Box', fill: { type: 'solid', color: '#ffffff' }, textColor: '#000000', fontSize: 14, textStyle: { fontWeight: 'bold', textTransform: 'uppercase' } },
   { id: 'home-logo-box', name: 'Home Logo Box', fill: { type: 'solid', color: '#E6E7E8', useTeamColor: 'home1' } },
   { id: 'home-name-box', name: 'Home Name Box', fill: { type: 'solid', color: '#ffffff' }, textColor: '#000000', fontSize: 20, textStyle: { fontWeight: 'bold', textTransform: 'uppercase' } },
-  { id: 'home-score-box', name: 'Home Score Box', fill: { type: 'solid', color: '#D1D3D4' }, textColor: '#000000', fontSize: 28, textStyle: { fontWeight: 'bold' } },
-  { id: 'away-score-box', name: 'Away Score Box', fill: { type: 'solid', color: '#D1D3D4' }, textColor: '#000000', fontSize: 28, textStyle: { fontWeight: 'bold' } },
+  { id: 'score-box', name: 'Score Box', fill: { type: 'solid', color: '#D1D3D4' }, textColor: '#000000', fontSize: 28, textStyle: { fontWeight: 'bold' } },
   { id: 'away-name-box', name: 'Away Name Box', fill: { type: 'solid', color: '#ffffff' }, textColor: '#000000', fontSize: 20, textStyle: { fontWeight: 'bold', textTransform: 'uppercase' } },
   { id: 'away-logo-box', name: 'Away Logo Box', fill: { type: 'solid', color: '#E6E7E8', useTeamColor: 'away1' } },
   { id: 'timer-box', name: 'Timer Box', fill: { type: 'solid', color: '#EF3E42' }, textColor: '#ffffff', fontSize: 20, textStyle: { fontWeight: 'bold' } },
@@ -471,13 +470,39 @@ export const useGraphicsCustomizationStore = create<GraphicsCustomizationState>(
     }),
     {
       name: "localmatch-graphics-customization",
-      version: 23, // Increment to force reset - add matchStatsFullScreen customization
+      version: 24, // v24: unify score bug score boxes into a single "score-box" component
       migrate: (persistedState: unknown, version: number) => {
         // Always reset if version is old or if components are missing
         if (version < 23) {
           // Version 23: add matchStatsFullScreen customization + keep prior defaults aligned
           return defaultCustomizations
         }
+
+        // Version 24: unify scorebug home/away score boxes into a single component id.
+        if (version < 24) {
+          const next = { ...(persistedState as any) } as any
+          const sb = next?.scoreBug as GraphicCustomization | undefined
+          if (sb?.components && Array.isArray(sb.components)) {
+            const comps = sb.components as ComponentStyle[]
+            const existing = comps.find((c) => c.id === 'score-box')
+            const homeLegacy = comps.find((c) => c.id === 'home-score-box')
+            const awayLegacy = comps.find((c) => c.id === 'away-score-box')
+
+            if (!existing) {
+              const source = homeLegacy || awayLegacy
+              const fallback = defaultScoreBugComponents.find((c) => c.id === 'score-box')
+              if (source) {
+                comps.push({ ...source, id: 'score-box', name: 'Score Box' })
+              } else if (fallback) {
+                comps.push(fallback)
+              }
+            }
+
+            sb.components = comps.filter((c) => c.id !== 'home-score-box' && c.id !== 'away-score-box')
+          }
+          return next as GraphicsCustomizationState
+        }
+
         // Check if persisted state has components properly
         const state = persistedState as Record<string, unknown>
         const scoreBug = state?.scoreBug as GraphicCustomization | undefined
@@ -488,6 +513,43 @@ export const useGraphicsCustomizationStore = create<GraphicsCustomizationState>(
         const msfs = state?.matchStatsFullScreen as GraphicCustomization | undefined
         if (!msfs?.components || msfs.components.length === 0) {
           return defaultCustomizations
+        }
+
+        // Safety net: even if the persisted `version` is already >= 24, some users may still
+        // have legacy scorebug component IDs stored (e.g., from imports or older saves).
+        // Ensure the renderer always has a usable `score-box` component.
+        try {
+          const next = { ...(persistedState as any) } as any
+          const sb = next?.scoreBug as GraphicCustomization | undefined
+          if (sb?.components && Array.isArray(sb.components)) {
+            const comps = sb.components as ComponentStyle[]
+            const existing = comps.find((c) => c.id === 'score-box')
+            const homeLegacy = comps.find((c) => c.id === 'home-score-box')
+            const awayLegacy = comps.find((c) => c.id === 'away-score-box')
+
+            if (!existing) {
+              const source = homeLegacy || awayLegacy
+              const fallback = defaultScoreBugComponents.find((c) => c.id === 'score-box')
+              if (source) {
+                comps.push({ ...source, id: 'score-box', name: 'Score Box' })
+              } else if (fallback) {
+                comps.push(fallback)
+              }
+            }
+
+            // Ensure score-box has a fill; if not, patch it to default so it never renders transparent.
+            const scoreBox = comps.find((c) => c.id === 'score-box')
+            const defaultScoreBox = defaultScoreBugComponents.find((c) => c.id === 'score-box')
+            if (scoreBox && (!scoreBox.fill || !(scoreBox.fill as any).type)) {
+              if (defaultScoreBox?.fill) scoreBox.fill = defaultScoreBox.fill
+            }
+
+            sb.components = comps.filter((c) => c.id !== 'home-score-box' && c.id !== 'away-score-box')
+            next.scoreBug = sb
+          }
+          return next as GraphicsCustomizationState
+        } catch {
+          // If anything goes wrong, fall back to persisted state.
         }
         return persistedState as GraphicsCustomizationState
       },
@@ -586,7 +648,7 @@ export async function migrateLegacyPatternDataUrlsToAssets(): Promise<{ migrated
       if (typeof customUrl !== 'string' || !customUrl.startsWith('data:')) continue
 
       const existing = cache.get(customUrl)
-      let newUrl = existing
+      let newUrl: string | undefined = existing
       if (!newUrl) {
         const ext = guessExtFromDataUrl(customUrl)
         const relPath = `patterns/legacy-${hashString(customUrl)}.${ext}`
@@ -594,7 +656,7 @@ export async function migrateLegacyPatternDataUrlsToAssets(): Promise<{ migrated
           const res = await api.assets.writeDataUrl(relPath, customUrl)
           if (res?.success && res.url) {
             newUrl = res.url
-            cache.set(customUrl, newUrl)
+            cache.set(customUrl, res.url)
           }
         } catch {
           // keep as-is

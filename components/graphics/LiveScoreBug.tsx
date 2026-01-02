@@ -104,6 +104,11 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
   const getStyle = (id: string) => getPatternStyleWithAnimation(customization, id, teamColors);
   const getColor = (id: string) => getTextColor(customization, id);
   const getPattern = (id: string) => getPatternConfig(customization, id);
+
+  const scoreBoxStyle = (() => {
+    const s = getStyle('score-box');
+    return Object.keys(s).length > 0 ? s : ({ backgroundColor: '#D1D3D4' } as React.CSSProperties);
+  })();
   
   const mins = String(timer.minutes ?? 0).padStart(2, '0');
   const secs = String(timer.seconds ?? 0).padStart(2, '0');
@@ -141,8 +146,14 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
     }
   }, [animate, showExtra]);
 
+  // OBS Browser Source can render at a fractional device scale factor (DPI),
+  // which can cause 1–2px rounding differences and clip the right edge.
+  // Add a tiny safety margin so the full bar is always visible.
+  const BAR_WIDTH = 724;
+  const EXTRA_WIDTH = 56;
+
   return (
-    <div className="relative overflow-visible" style={{ minWidth: '776px' }}>
+    <div className="relative overflow-visible" style={{ minWidth: `${BAR_WIDTH + EXTRA_WIDTH}px` }}>
       <style>{`
         /* Custom font for tournament name */
         @font-face {
@@ -288,16 +299,19 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
           className={`absolute left-0 top-0 h-full z-10 ${animate === 'in' ? 'anim-wrapper-in' : 'anim-wrapper-out'}`}
           // NOTE: card indicators sit slightly above the name boxes; since this wrapper uses clip-path,
           // we must extend the wrapper upward so those indicators don't get clipped.
-          style={{ width: '720px', overflow: 'visible', top: -20, height: 'calc(100% + 20px)', paddingTop: 20 }}
+          style={{ width: `${BAR_WIDTH}px`, overflow: 'visible', top: -20, height: 'calc(100% + 20px)', paddingTop: 20 }}
         >
           {/* Content - slides out from behind NSL using transform */}
           <div className={`flex h-14 ${animate === 'in' ? 'anim-content-in' : 'anim-content-out'}`} style={{ paddingLeft: '96px' }}>
-            {/* 2. Home Logo Box - uses customization */}
-            <div className="w-16 h-full flex items-center justify-center shrink-0" style={getStyle('home-logo-box')}>
+            {/* 2. Home Logo Box - use customization (patterns/gradients/custom fills) with team color fallback */}
+            <div
+              className="w-16 h-full flex items-center justify-center shrink-0"
+              style={Object.keys(getStyle('home-logo-box')).length > 0 ? getStyle('home-logo-box') : { backgroundColor: home.color1 }}
+            >
               {home.logo ? (
                 <img src={home.logo} className="h-12 w-12 object-contain drop-shadow-sm" alt="Home" />
               ) : (
-                <div className="h-12 w-12 rounded flex items-center justify-center text-white text-xs font-bold" style={getStyle('home-logo-box')}>
+                <div className="h-12 w-12 rounded flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: home.color1 }}>
                   {home.shortName.slice(0, 2)}
                 </div>
               )}
@@ -307,7 +321,12 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
             <div className="w-32 h-full flex flex-col shrink-0" style={getStyle('home-name-box')}>
               <div className="flex-1 flex items-center justify-center px-3 relative">
                 {renderCards('home')}
-                <span className="tracking-tighter" style={getFullTextStyle(customization, 'home-name-box')}>{home.shortName}</span>
+                <span
+                  className="font-black text-3xl tracking-tighter"
+                  style={{ color: getColor('home-name-box') || '#000000', ...getFullTextStyle(customization, 'home-name-box') }}
+                >
+                  {home.shortName}
+                </span>
               </div>
               <div className="h-1.5 flex w-full">
                 <div className="w-1/2" style={{ backgroundColor: home.color1 }}></div>
@@ -316,16 +335,16 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
             </div>
 
             {/* 4. Home Score */}
-            <div className="w-16 h-full flex flex-col items-center justify-center shrink-0" style={getStyle('home-score-box')}>
-              <span className="text-center leading-none" style={getFullTextStyle(customization, 'home-score-box')}>{home.score}</span>
+            <div className="w-16 h-full flex flex-col items-center justify-center shrink-0" style={scoreBoxStyle}>
+              <span className="text-4xl text-center leading-none" style={{ color: getColor('score-box') || '#000000', ...getFullTextStyle(customization, 'score-box') }}>{home.score}</span>
               {isPenaltyShootout && (
                 <span className="text-xs text-red-600 font-bold mt-0.5">({homePenScore})</span>
               )}
             </div>
 
             {/* 5. Away Score */}
-            <div className="w-16 h-full flex flex-col items-center justify-center shrink-0 border-l border-white/40" style={getStyle('away-score-box')}>
-              <span className="text-center leading-none" style={getFullTextStyle(customization, 'away-score-box')}>{away.score}</span>
+            <div className="w-16 h-full flex flex-col items-center justify-center shrink-0 border-l border-white/40" style={scoreBoxStyle}>
+              <span className="text-4xl text-center leading-none" style={{ color: getColor('score-box') || '#000000', ...getFullTextStyle(customization, 'score-box') }}>{away.score}</span>
               {isPenaltyShootout && (
                 <span className="text-xs text-red-600 font-bold mt-0.5">({awayPenScore})</span>
               )}
@@ -335,7 +354,12 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
             <div className="w-32 h-full flex flex-col shrink-0" style={getStyle('away-name-box')}>
               <div className="flex-1 flex items-center justify-center px-3 relative">
                 {renderCards('away')}
-                <span className="tracking-tighter" style={getFullTextStyle(customization, 'away-name-box')}>{away.shortName}</span>
+                <span
+                  className="font-black text-3xl tracking-tighter"
+                  style={{ color: getColor('away-name-box') || '#000000', ...getFullTextStyle(customization, 'away-name-box') }}
+                >
+                  {away.shortName}
+                </span>
               </div>
               <div className="h-1.5 flex w-full">
                 <div className="w-1/2" style={{ backgroundColor: away.color1 }}></div>
@@ -343,12 +367,15 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
               </div>
             </div>
 
-            {/* 7. Away Logo Box - uses customization */}
-            <div className="w-16 h-full flex items-center justify-center shrink-0" style={getStyle('away-logo-box')}>
+            {/* 7. Away Logo Box - use customization (patterns/gradients/custom fills) with team color fallback */}
+            <div
+              className="w-16 h-full flex items-center justify-center shrink-0"
+              style={Object.keys(getStyle('away-logo-box')).length > 0 ? getStyle('away-logo-box') : { backgroundColor: away.color1 }}
+            >
               {away.logo ? (
                 <img src={away.logo} className="h-12 w-12 object-contain drop-shadow-sm" alt="Away" />
               ) : (
-                <div className="h-12 w-12 rounded flex items-center justify-center text-white text-xs font-bold" style={getStyle('away-logo-box')}>
+                <div className="h-12 w-12 rounded flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: away.color1 }}>
                   {away.shortName.slice(0, 2)}
                 </div>
               )}
@@ -358,7 +385,7 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
             <div className="h-full w-28 flex items-center justify-center shrink-0 relative z-20" style={{ ...getStyle('timer-box'), paddingRight: 0, marginRight: 0 }}>
               {/* Show period text for break periods, timer for playing periods */}
               {['ht', 'ft', 'etht', 'aet', 'pen'].includes(period) ? (
-                <span className="tracking-tight" style={getFullTextStyle(customization, 'timer-box')}>
+                <span className="font-bold text-2xl tracking-tight" style={{ color: getColor('timer-box') || '#ffffff' }}>
                   {period === 'ht' ? 'HT' : 
                    period === 'ft' ? 'FT' : 
                    period === 'etht' ? 'ET-HT' : 
@@ -366,7 +393,7 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
                    period === 'pen' ? 'PEN' : period.toUpperCase()}
                 </span>
               ) : (
-                <span className="tracking-tight" style={getFullTextStyle(customization, 'timer-box')}>{mins}:{secs}</span>
+                <span className="font-bold text-3xl tracking-tight" style={{ color: getColor('timer-box') || '#ffffff' }}>{mins}:{secs}</span>
               )}
             </div>
           </div>
@@ -378,13 +405,13 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
             className={`absolute top-0 h-14 w-14 flex items-center justify-center z-10 ${extraAnim === 'in' ? 'anim-extra-in' : extraAnim === 'out' ? 'anim-extra-out' : ''}`}
             style={{ 
               ...getStyle('extra-time-box'), 
-              left: '720px',
+              left: `${BAR_WIDTH}px`,
               margin: '0',
               border: 'none',
               boxSizing: 'border-box'
             }}
           >
-            <span style={getFullTextStyle(customization, 'extra-time-box')}>+{displayExtra}</span>
+            <span className="font-bold text-2xl" style={{ color: getColor('extra-time-box') || '#000000' }}>+{displayExtra}</span>
           </div>
         )}
 
