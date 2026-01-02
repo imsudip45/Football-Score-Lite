@@ -1,12 +1,12 @@
 import { WebSocketServer, WebSocket } from 'ws'
 import { createServer, IncomingMessage, ServerResponse } from 'http'
 import { readFile } from 'fs/promises'
-import { join, extname } from 'path'
+import { join, extname, normalize, sep } from 'path'
 import { existsSync } from 'fs'
 import { networkInterfaces } from 'os'
 
 // Get local IP address for network access
-function getLocalIP(): string {
+export function getLocalIP(): string {
   const nets = networkInterfaces()
   for (const name of Object.keys(nets)) {
     const netList = nets[name]
@@ -39,6 +39,15 @@ const MIME_TYPES: Record<string, string> = {
   '.eot': 'application/vnd.ms-fontobject',
 }
 
+function sanitizeRelativePath(relPath: string): string {
+  const cleaned = relPath.replace(/^([/\\])+/, '')
+  const norm = normalize(cleaned)
+  if (norm.startsWith('..' + sep) || norm === '..' || norm.includes('..' + sep)) {
+    throw new Error('Invalid asset path')
+  }
+  return norm
+}
+
 let staticFilesPath: string = ''
 
 export function setStaticFilesPath(path: string) {
@@ -49,8 +58,26 @@ export function setStaticFilesPath(path: string) {
 export interface GraphicsState {
   scoreBug: {
     visible: boolean
-    homeTeam: { name: string; shortName: string; score: number; color: string; logo?: string }
-    awayTeam: { name: string; shortName: string; score: number; color: string; logo?: string }
+    homeTeam: {
+      name: string
+      shortName: string
+      score: number
+      color: string
+      secondaryColor?: string
+      logo?: string
+      yellowCards?: number
+      redCards?: number
+    }
+    awayTeam: {
+      name: string
+      shortName: string
+      score: number
+      color: string
+      secondaryColor?: string
+      logo?: string
+      yellowCards?: number
+      redCards?: number
+    }
     timer: { minutes: number; seconds: number; period: string; extra?: number }
     possession: 'home' | 'away' | null
   }
@@ -134,6 +161,9 @@ export interface GraphicsState {
     teamName: string
     teamColor: string
     teamLogo?: string
+    tournamentShortName?: string
+    tournamentLogo?: string
+    tournamentColor?: string
     formation: string
     players: Array<{ name: string; number: string; position?: string }>
     subs: Array<{ name: string; number: string }>
@@ -220,6 +250,9 @@ const defaultState: GraphicsState = {
     teamName: '',
     teamColor: '#14b8a6',
     teamLogo: '',
+    tournamentShortName: 'NSL',
+    tournamentLogo: '',
+    tournamentColor: '#EF3E42',
     formation: '4-3-3',
     players: [],
     subs: [],
@@ -448,19 +481,35 @@ function handleMessage(data: any, ws: WebSocket) {
         
         // Update match data for score bug and VS graphic
         if (currentMatch) {
+          const countCards = (team: 'home' | 'away') => {
+            const events = (currentMatch.events || []).filter((e: any) => e.team === team);
+            const yellowCards = events.filter((e: any) => e.type === 'yellow').length
+            const redCards = events.filter((e: any) => e.type === 'red' || e.type === 'second-yellow').length
+            return { yellowCards, redCards };
+          };
+
+          const homeCardCounts = countCards('home');
+          const awayCardCounts = countCards('away');
+
           currentState.scoreBug.homeTeam = {
             name: currentMatch.homeTeam?.name || 'Home',
             shortName: currentMatch.homeTeam?.shortName || 'HOM',
             score: currentMatch.homeScore ?? 0,
             color: currentMatch.homeTeam?.primaryColor || '#A50044',
+            secondaryColor: currentMatch.homeTeam?.secondaryColor || currentMatch.homeTeam?.primaryColor || '#A50044',
             logo: currentMatch.homeTeam?.logo || '',
+            yellowCards: homeCardCounts.yellowCards,
+            redCards: homeCardCounts.redCards,
           }
           currentState.scoreBug.awayTeam = {
             name: currentMatch.awayTeam?.name || 'Away',
             shortName: currentMatch.awayTeam?.shortName || 'AWY',
             score: currentMatch.awayScore ?? 0,
             color: currentMatch.awayTeam?.primaryColor || '#00529F',
+            secondaryColor: currentMatch.awayTeam?.secondaryColor || currentMatch.awayTeam?.primaryColor || '#00529F',
             logo: currentMatch.awayTeam?.logo || '',
+            yellowCards: awayCardCounts.yellowCards,
+            redCards: awayCardCounts.redCards,
           }
           
           // Update VS graphic with match data
@@ -563,6 +612,9 @@ function handleMessage(data: any, ws: WebSocket) {
             teamName: lineupData.teamName || '',
             teamColor: lineupData.teamColor || '#14b8a6',
             teamLogo: lineupData.teamLogo || '',
+            tournamentShortName: lineupData.tournamentShortName || currentState.lineup.tournamentShortName || '',
+            tournamentLogo: lineupData.tournamentLogo || currentState.lineup.tournamentLogo || '',
+            tournamentColor: lineupData.tournamentColor || currentState.lineup.tournamentColor || '',
             formation: lineupData.formation || '4-3-3',
             players: lineupData.players || [],
             subs: lineupData.subs || [],
@@ -730,5 +782,61 @@ export function startHttpServer(port: number, staticPath: string) {
     console.log(`[HTTP] Commentator available at http://${localIP}:${port}/commentator`)
   })
   
+  return server
+}
+
+// HTTP Server for serving userData assets to normal browsers.
+// Electron renderer can load `app-assets://...` directly, but external browsers cannot.
+// This server exposes them as: http://<host>:<port>/app-assets/<relpath>
+export function startAssetsServer(port: number, assetsPath: string) {
+  const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+    try {
+      let url = req.url || '/'
+      url = url.split('?')[0]
+
+      if (!url.startsWith('/app-assets/')) {
+        res.writeHead(404, { 'Access-Control-Allow-Origin': '*' })
+        res.end('Not Found')
+        return
+      }
+
+      const rel = decodeURIComponent(url.replace('/app-assets/', ''))
+      const safeRel = sanitizeRelativePath(rel)
+      const filePath = join(assetsPath, safeRel)
+
+      if (!filePath.startsWith(assetsPath)) {
+        res.writeHead(403, { 'Access-Control-Allow-Origin': '*' })
+        res.end('Forbidden')
+        return
+      }
+
+      if (!existsSync(filePath)) {
+        res.writeHead(404, { 'Access-Control-Allow-Origin': '*' })
+        res.end('Not Found')
+        return
+      }
+
+      const content = await readFile(filePath)
+      const ext = extname(filePath).toLowerCase()
+      const mimeType = MIME_TYPES[ext] || 'application/octet-stream'
+
+      res.writeHead(200, {
+        'Content-Type': mimeType,
+        'Access-Control-Allow-Origin': '*',
+      })
+      res.end(content)
+    } catch (error) {
+      console.error('[ASSETS] Error:', error)
+      res.writeHead(500, { 'Access-Control-Allow-Origin': '*' })
+      res.end('Internal Server Error')
+    }
+  })
+
+  server.listen(port, '0.0.0.0', () => {
+    const localIP = getLocalIP()
+    console.log(`[ASSETS] Server started on http://0.0.0.0:${port} (accessible from network)`) 
+    console.log(`[ASSETS] Local IP: ${localIP}`)
+  })
+
   return server
 }

@@ -232,6 +232,7 @@ export function LiveControl() {
   
   // Network URL state for commentator access
   const [commentatorNetworkUrl, setCommentatorNetworkUrl] = useState<string>('')
+  const [rendererNetworkUrl, setRendererNetworkUrl] = useState<string>('')
   
   // Commentator window reference - Requirements: 8.2, 8.3
   const commentatorWindowRef = useRef<Window | null>(null)
@@ -240,16 +241,30 @@ export function LiveControl() {
   useEffect(() => {
     const fetchNetworkInfo = async () => {
       try {
+        // Prefer Electron IPC (works even when app runs at localhost in dev)
+        if (window.electronAPI?.network?.getInfo) {
+          const info = await window.electronAPI.network.getInfo()
+          const base = `http://${info.ip}:${info.port}`
+          setCommentatorNetworkUrl(`${base}/commentator`)
+          setRendererNetworkUrl(`${base}/renderer`)
+          return
+        }
+
+        // Fallback: try existing API (if present)
         const response = await fetch('http://localhost:3000/api/network-info')
         if (response.ok) {
           const data = await response.json()
-          setCommentatorNetworkUrl(data.commentatorUrl)
+          if (data?.commentatorUrl) setCommentatorNetworkUrl(data.commentatorUrl)
+          if (data?.rendererUrl) setRendererNetworkUrl(data.rendererUrl)
+          return
         }
       } catch (error) {
-        // Fallback: use current hostname
+        // Fallback: use current hostname if it's already a LAN hostname/IP
         const hostname = window.location.hostname
+        const port = window.location.port || '3000'
         if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-          setCommentatorNetworkUrl(`http://${hostname}:3000/commentator`)
+          setCommentatorNetworkUrl(`http://${hostname}:${port}/commentator`)
+          setRendererNetworkUrl(`http://${hostname}:${port}/renderer`)
         }
       }
     }
@@ -270,16 +285,28 @@ export function LiveControl() {
       return
     }
     
-    // Determine the correct URL based on environment
-    // In Electron production, the HTTP server serves static files on localhost:3000
-    // In development, Next.js dev server is on localhost:3000
+    // Always open via localhost inside the app.
+    // The Copy button still provides the LAN URL for other devices.
     const commentatorUrl = 'http://localhost:3000/commentator'
+
+    // In Electron, open as a real BrowserWindow so we can maximize reliably.
+    if (window.electronAPI?.commentator?.open) {
+      window.electronAPI.commentator.open(commentatorUrl).catch((error) => {
+        console.error('[LiveControl] Failed to open commentator window:', error)
+        toast.error('Failed to open commentator window')
+      })
+      return
+    }
     
-    // Open new window with appropriate dimensions (1280x720) - Requirements: 8.2
-    // Allow fullscreen mode and resizing - Requirements: 8.3
+    // Open new window maximized (requested UX).
+    // Use screen size as initial features, then best-effort move/resize after open.
+    const w = typeof window !== 'undefined' ? window.screen?.availWidth : 1280
+    const h = typeof window !== 'undefined' ? window.screen?.availHeight : 720
     const windowFeatures = [
-      'width=1280',
-      'height=720',
+      `width=${w || 1280}`,
+      `height=${h || 720}`,
+      'left=0',
+      'top=0',
       'resizable=yes',
       'scrollbars=yes',
       'toolbar=no',
@@ -297,6 +324,18 @@ export function LiveControl() {
     if (newWindow) {
       commentatorWindowRef.current = newWindow
       toast.success('Commentator output opened')
+
+      // Best-effort maximize (some browsers may restrict this; Electron allows it).
+      try {
+        const sw = window.screen?.availWidth
+        const sh = window.screen?.availHeight
+        if (typeof sw === 'number' && typeof sh === 'number') {
+          newWindow.moveTo(0, 0)
+          newWindow.resizeTo(sw, sh)
+        }
+      } catch {
+        // ignore
+      }
       
       // Handle window close events - Requirements: 8.3
       const checkWindowClosed = setInterval(() => {
@@ -309,6 +348,38 @@ export function LiveControl() {
     } else {
       toast.error('Failed to open commentator window. Please check popup blocker.')
     }
+  }, [])
+
+  const openMaximizedWindow = useCallback((url: string, name: string, fallback: { w: number; h: number }) => {
+    const w = typeof window !== 'undefined' ? window.screen?.availWidth : fallback.w
+    const h = typeof window !== 'undefined' ? window.screen?.availHeight : fallback.h
+    const features = [
+      `width=${w || fallback.w}`,
+      `height=${h || fallback.h}`,
+      'left=0',
+      'top=0',
+      'resizable=yes',
+      'scrollbars=yes',
+      'toolbar=no',
+      'menubar=no',
+      'location=no',
+      'status=yes'
+    ].join(',')
+
+    const newWindow = window.open(url, name, features)
+    if (!newWindow) return null
+
+    try {
+      const sw = window.screen?.availWidth
+      const sh = window.screen?.availHeight
+      if (typeof sw === 'number' && typeof sh === 'number') {
+        newWindow.moveTo(0, 0)
+        newWindow.resizeTo(sw, sh)
+      }
+    } catch {
+      // ignore
+    }
+    return newWindow
   }, [])
   
   // Cleanup commentator window on unmount
@@ -537,7 +608,7 @@ export function LiveControl() {
       const delay = hadVisibleGraphics ? 1200 : 100
       setTimeout(() => {
         toggleMatchStatsFullScreen(true)
-        toast.success("Match Stats (Fullscreen) shown")
+        toast.success("Match Stats (Summary) shown")
       }, delay)
     } else {
       toggleMatchStatsFullScreen(false)
@@ -953,8 +1024,9 @@ export function LiveControl() {
             size="sm" 
             className="gap-1 bg-transparent"
             onClick={() => {
-              navigator.clipboard.writeText('http://localhost:3000/renderer')
-              toast.success('Renderer URL copied to clipboard')
+              const url = rendererNetworkUrl || 'http://localhost:3000/renderer'
+              navigator.clipboard.writeText(url)
+              toast.success(`Copied: ${url}`)
             }}
           >
             <ExternalLink className="h-4 w-4" />
@@ -967,7 +1039,16 @@ export function LiveControl() {
             size="sm" 
             className="gap-1 bg-transparent"
             onClick={() => {
-              window.open('http://localhost:3000/renderer', 'renderer', 'width=1920,height=1080')
+              // In Electron, open as a real BrowserWindow so we can maximize reliably.
+              if (window.electronAPI?.renderer?.open) {
+                window.electronAPI.renderer.open('main', 'http://localhost:3000/renderer').catch((error) => {
+                  console.error('[LiveControl] Failed to open renderer window:', error)
+                  toast.error('Failed to open renderer window')
+                })
+                return
+              }
+
+              openMaximizedWindow('http://localhost:3000/renderer', 'renderer', { w: 1920, h: 1080 })
             }}
           >
             <Monitor className="h-4 w-4" />
@@ -991,7 +1072,8 @@ export function LiveControl() {
             size="sm"
             className="gap-1 bg-transparent text-blue-400 hover:text-blue-300 border-blue-500/50"
             onClick={() => {
-              const url = commentatorNetworkUrl || `http://${window.location.hostname}:3000/commentator`
+              const port = window.location.port || '3000'
+              const url = commentatorNetworkUrl || `http://${window.location.hostname}:${port}/commentator`
               navigator.clipboard.writeText(url).then(() => {
                 toast.success(`Copied: ${url}`)
               }).catch(() => {
@@ -2011,7 +2093,7 @@ export function LiveControl() {
                 <div className="flex items-center justify-between px-4 py-2">
                   <div className="flex items-center gap-3">
                     <LayoutGrid className="h-5 w-5 text-muted-foreground" />
-                    <span className="text-base font-medium">Match Stats (FS)</span>
+                    <span className="text-base font-medium">Match Stats (Summary)</span>
                   </div>
                   <Button
                     size="lg"

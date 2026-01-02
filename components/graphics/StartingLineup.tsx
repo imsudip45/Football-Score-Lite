@@ -51,6 +51,8 @@ interface StartingLineupProps {
   teamColor?: string;
   teamSecondaryColor?: string;
   teamLogo?: string;
+  tournamentShortName?: string;
+  tournamentLogo?: string;
   formation?: string;
   players?: Player[];
   subs?: Sub[];
@@ -67,6 +69,7 @@ interface PlayerCardProps extends Player {
   index?: number;
   onPositionChange?: (index: number, top: string, left: string) => void;
   containerRef?: React.RefObject<HTMLDivElement | null>;
+  resolveImageSrc?: (src?: string) => string;
   // Customization colors
   numberBgColor?: string;
   numberTextColor?: string;
@@ -117,6 +120,7 @@ const getScaledFontSize = (text: string, baseFontSize: number = 28, maxWidth: nu
 
 const DraggablePlayerCard: React.FC<PlayerCardProps> = ({ 
   name, shortName, number, top, left, photo, className, style, teamColor, debugMode, index, onPositionChange, containerRef,
+  resolveImageSrc,
   numberBgColor, numberTextColor, infoBgColor, nameTextColor
 }) => {
   const { firstName, lastName } = getDisplayName(name, shortName);
@@ -179,7 +183,7 @@ const DraggablePlayerCard: React.FC<PlayerCardProps> = ({
       <div className="h-[115px] relative overflow-hidden" style={{ background: teamColor }}>
         {photo && photo.length > 0 ? (
           <img 
-            src={photo} 
+            src={resolveImageSrc ? resolveImageSrc(photo) : photo} 
             alt={name} 
             className="w-full h-full object-cover object-top drop-shadow-xl group-hover:scale-105 transition-transform duration-500"
             draggable={false}
@@ -274,6 +278,8 @@ const StartingLineup: React.FC<StartingLineupProps> = ({
   teamColor = '#D6002A',
   teamSecondaryColor,
   teamLogo = '',
+  tournamentShortName = '',
+  tournamentLogo = '',
   formation = '4-3-3',
   players = defaultPlayers,
   subs = defaultSubs,
@@ -281,6 +287,14 @@ const StartingLineup: React.FC<StartingLineupProps> = ({
   debugMode = false, // Set to true for position debugging
   tournamentColor
 }) => {
+  // In dev (http://) we can load public assets from `/...`.
+  // In Electron production (file://.../out/renderer/index.html) absolute `/...` resolves to the filesystem root,
+  // so we must use a relative path up to `out/`.
+  const snasmFontUrl =
+    typeof window !== 'undefined' && window.location.protocol === 'file:'
+      ? '../Snasm-W05-Regular.ttf'
+      : '/Snasm-W05-Regular.ttf';
+
   // Get customization settings from store
   const customization = useGraphicsCustomizationStore(state => state.lineup);
   
@@ -293,6 +307,35 @@ const StartingLineup: React.FC<StartingLineupProps> = ({
   
   const getStyle = (id: string) => getPatternStyleWithAnimation(customization, id, teamColors);
   const getColor = (id: string) => getTextColor(customization, id);
+
+  const isElectron =
+    typeof window !== 'undefined' &&
+    (
+      !!(window as any).electronAPI ||
+      (typeof navigator !== 'undefined' && /Electron/i.test(navigator.userAgent))
+    );
+  const toHttpAssetsUrl = useCallback((src: string): string => {
+    if (!src.startsWith('app-assets://')) return src;
+    const host = typeof window !== 'undefined' ? (window.location.hostname || 'localhost') : 'localhost';
+
+    let rel = '';
+    if (src.startsWith('app-assets:///')) rel = src.replace('app-assets:///', '');
+    else rel = src.replace('app-assets://', '').replace(/^\/+/, '');
+
+    const encoded = rel
+      .split('/')
+      .filter(Boolean)
+      .map(encodeURIComponent)
+      .join('/');
+
+    return `http://${host}:3002/app-assets/${encoded}`;
+  }, []);
+
+  const resolveImageSrc = useCallback((src?: string): string => {
+    if (!src) return '';
+    if (!isElectron && src.startsWith('app-assets://')) return toHttpAssetsUrl(src);
+    return src;
+  }, [isElectron, toHttpAssetsUrl]);
 
   const logo = teamLogo || '';
   const pitchRef = useRef<HTMLDivElement>(null);
@@ -325,6 +368,13 @@ const StartingLineup: React.FC<StartingLineupProps> = ({
   return (
     <div className={`w-[1920px] h-[1080px] flex shadow-2xl font-sans relative overflow-hidden ${animate === 'out' ? 'anim-lineup-container-out' : ''}`}>
       <style>{`
+        @font-face {
+          font-family: 'Snasm';
+          src: url('${snasmFontUrl}') format('truetype');
+          font-weight: 400;
+          font-style: normal;
+        }
+
         @keyframes lineupContainerOut { 
           0% { opacity: 1; } 
           100% { opacity: 0; } 
@@ -375,7 +425,7 @@ const StartingLineup: React.FC<StartingLineupProps> = ({
 
         <div className={`absolute top-[50%] transform -translate-y-1/2 left-[50px] z-20 ${animate === 'in' ? 'anim-logo-in' : 'anim-logo-out'}`} style={{ animationDelay: animate === 'in' ? '0.3s' : '0s' }}>
           {logo && logo.length > 0 ? (
-            <img src={logo} style={{ width: '320px', height: '320px', objectFit: 'contain', filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.5))' }} alt="Crest" />
+            <img src={resolveImageSrc(logo)} style={{ width: '320px', height: '320px', objectFit: 'contain', filter: 'drop-shadow(0 15px 30px rgba(0,0,0,0.5))' }} alt="Crest" />
           ) : (
             <ShieldFallback primaryColor={teamColor} secondaryColor={teamSecondaryColor} size={320} />
           )}
@@ -421,6 +471,7 @@ const StartingLineup: React.FC<StartingLineupProps> = ({
               index={i}
               onPositionChange={handlePositionChange}
               containerRef={pitchRef}
+              resolveImageSrc={resolveImageSrc}
               numberBgColor={getStyle('player-number').backgroundColor as string}
               numberTextColor={getColor('player-number')}
               infoBgColor={getStyle('player-card-info').backgroundColor as string}
@@ -448,23 +499,74 @@ const StartingLineup: React.FC<StartingLineupProps> = ({
         className={`w-[360px] flex flex-col h-full border-l border-gray-300 relative z-20 ${animate === 'in' ? 'anim-sidebar-right-in' : 'anim-sidebar-right-out'}`}
         style={Object.keys(getStyle('right-sidebar')).length > 0 ? getStyle('right-sidebar') : { backgroundColor: '#F8F8F8' }}
       >
-        
-        <div className="mt-[120px] px-8 mb-8 relative z-10">
-          <div className="font-bold text-[15px] uppercase tracking-wider mb-2" style={{ color: '#666666' }}>HEAD COACH</div>
-          {coachFirstName && (
-            <div className="text-[42px] font-condensed uppercase leading-[0.9] tracking-tight" style={{ color: '#000000' }}>{coachFirstName}</div>
-          )}
-          <div className="text-[42px] font-condensed uppercase leading-[0.9] tracking-tight mb-8" style={{ color: '#000000' }}>{coachLastName}</div>
-          <div className="text-[70px] font-condensed tracking-widest leading-none" style={{ color: '#000000' }}>{formation}</div>
+
+        {/* Tournament header */}
+        {(tournamentShortName || tournamentLogo) && (
+          <div className="pt-[36px] relative z-10">
+            <div className="px-8">
+              <div className={`flex items-end gap-4 ${tournamentLogo ? 'justify-between' : 'justify-center'}`}>
+                {tournamentLogo ? (
+                  <img src={resolveImageSrc(tournamentLogo)} alt="Tournament" className="h-10 w-auto object-contain" />
+                ) : null}
+                {tournamentShortName && (
+                  <div
+                    className="text-[58px] leading-none uppercase whitespace-nowrap italic"
+                    style={{
+                      fontFamily: "'Snasm', sans-serif",
+                      color: tournamentColor || '#EF3E42',
+                    }}
+                  >
+                    {tournamentShortName}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="mt-4 h-px w-full bg-black/80" />
+          </div>
+        )}
+
+        {/* Manager + formation */}
+        <div className="px-8 pt-6 relative z-10">
+          <div className="text-[18px] font-condensed uppercase tracking-wider" style={{ color: '#000000' }}>
+            MANAGER
+          </div>
+
+          <div className="mt-2">
+            {coachFirstName && (
+              <div className="text-[44px] font-condensed uppercase leading-[0.9] tracking-tight" style={{ color: '#000000', fontWeight: 700 }}>
+                {coachFirstName}
+              </div>
+            )}
+            <div className="text-[44px] font-condensed uppercase leading-[0.9] tracking-tight" style={{ color: '#000000', fontWeight: 700 }}>
+              {coachLastName}
+            </div>
+          </div>
+
+          <div className="mt-8 text-center">
+            <div className="text-[78px] font-condensed leading-none" style={{ color: '#000000', fontWeight: 700, letterSpacing: '0.08em' }}>
+              {formation}
+            </div>
+          </div>
         </div>
 
-        <div className="flex-1 px-8 overflow-hidden relative z-10">
-          <h3 className="text-[26px] font-condensed italic mb-5" style={{ color: '#000000' }}>SUBS ({subs.length})</h3>
-          <ul className="space-y-2">
+        <div className="mt-8 h-px w-full bg-black/80" />
+
+        {/* Substitutions */}
+        <div className="flex-1 px-8 pt-5 overflow-hidden relative z-10">
+          <div className="text-[24px] font-condensed italic" style={{ color: '#000000' }}>
+            SUBSTITUTION
+          </div>
+          <div className="mt-3 h-px bg-black/80 -mx-8" />
+
+          <ul className="mt-5 space-y-3">
             {subs.map((sub, i) => (
-              <li key={i} className="flex items-center">
-                <span className="w-10 text-[22px] font-condensed" style={{ color: '#333333' }}>{sub.num}</span>
-                <span className="text-[22px] font-condensed uppercase tracking-wide" style={{ color: '#000000' }}>{sub.name}</span>
+              <li key={i} className="flex items-baseline">
+                <span className="w-16 text-[22px] font-condensed" style={{ color: '#000000' }}>
+                  {sub.num}.
+                </span>
+                <span className="text-[22px] font-condensed uppercase tracking-wide" style={{ color: '#000000' }}>
+                  {sub.name}
+                </span>
               </li>
             ))}
           </ul>

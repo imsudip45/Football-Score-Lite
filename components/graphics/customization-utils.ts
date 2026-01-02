@@ -9,6 +9,41 @@ export interface TeamColors {
   tournament?: string;
 }
 
+function isElectronRuntime(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    (
+      !!(window as any).electronAPI ||
+      (typeof navigator !== 'undefined' && /Electron/i.test(navigator.userAgent))
+    )
+  );
+}
+
+function toHttpAssetsUrl(src: string): string {
+  // Convert app-assets://... to http://<host>:3002/app-assets/<rel>
+  if (!src.startsWith('app-assets://')) return src;
+  const host = typeof window !== 'undefined' ? (window.location.hostname || 'localhost') : 'localhost';
+
+  let rel = '';
+  if (src.startsWith('app-assets:///')) rel = src.replace('app-assets:///', '');
+  else rel = src.replace('app-assets://', '').replace(/^\/+/, '');
+
+  const encoded = rel
+    .split('/')
+    .filter(Boolean)
+    .map(encodeURIComponent)
+    .join('/');
+
+  return `http://${host}:3002/app-assets/${encoded}`;
+}
+
+function resolveAssetUrl(url?: string): string | undefined {
+  if (!url) return url;
+  // Electron can load app-assets:// directly; browsers cannot.
+  if (!isElectronRuntime() && url.startsWith('app-assets://')) return toHttpAssetsUrl(url);
+  return url;
+}
+
 // Resolve team color reference to actual color value
 export function resolveTeamColor(
   useTeamColor: FillConfig['useTeamColor'],
@@ -55,6 +90,7 @@ export function getFillStyle(fill: FillConfig, teamColors?: TeamColors): React.C
     const baseColor = resolvedColor;
     
     if (type === 'custom' && customUrl) {
+      const resolvedCustomUrl = resolveAssetUrl(customUrl);
       // For custom PNG patterns with transparent backgrounds
       // Use a semi-transparent overlay of the BASE COLOR to control opacity
       // This ensures the pattern fades into the background color, not white
@@ -79,14 +115,14 @@ export function getFillStyle(fill: FillConfig, teamColors?: TeamColors): React.C
         
         return { 
           backgroundColor: baseColor,
-          backgroundImage: `linear-gradient(${overlayColor}, ${overlayColor}), url(${customUrl})`,
+          backgroundImage: `linear-gradient(${overlayColor}, ${overlayColor}), url(${resolvedCustomUrl})`,
           // IMPORTANT: Both layers need the same size for animation to work correctly
           // The overlay gradient will tile seamlessly, and the pattern will animate
           backgroundSize: `${size}px ${size}px, ${size}px ${size}px`,
           backgroundRepeat: 'repeat, repeat',
           backgroundPosition: '0 0, 0 0',
           '--pattern-opacity': opacity,
-          '--pattern-url': `url(${customUrl})`,
+          '--pattern-url': `url(${resolvedCustomUrl})`,
           '--pattern-size': `${size}px`,
         } as React.CSSProperties;
       }
@@ -94,12 +130,12 @@ export function getFillStyle(fill: FillConfig, teamColors?: TeamColors): React.C
       // Full opacity - just show the pattern
       return { 
         backgroundColor: baseColor,
-        backgroundImage: `url(${customUrl})`,
+        backgroundImage: `url(${resolvedCustomUrl})`,
         backgroundSize: `${size}px ${size}px`,
         backgroundRepeat: 'repeat',
         backgroundPosition: '0 0',
         '--pattern-opacity': opacity,
-        '--pattern-url': `url(${customUrl})`,
+        '--pattern-url': `url(${resolvedCustomUrl})`,
         '--pattern-size': `${size}px`,
       } as React.CSSProperties;
     }

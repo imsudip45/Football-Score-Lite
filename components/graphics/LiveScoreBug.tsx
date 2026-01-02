@@ -68,7 +68,6 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
   };
 
   const renderCards = (team: 'home' | 'away') => {
-    const yellow = team === 'home' ? home.yellowCards : away.yellowCards;
     const red = team === 'home' ? home.redCards : away.redCards;
     const redCount = Math.max(0, red ?? 0);
 
@@ -87,7 +86,7 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
         {cards.map((c, idx) => (
           <div
             key={`${team}-card-${c}-${idx}`}
-            className="w-2.5 h-4 rounded-[2px] shadow-[0_1px_0_rgba(0,0,0,0.35)]"
+            className="w-4 h-6 rounded-[2px] shadow-[0_1px_0_rgba(0,0,0,0.35)]"
             style={{ backgroundColor: c === 'yellow' ? '#FFCC00' : NSL_COLORS.red }}
           />
         ))}

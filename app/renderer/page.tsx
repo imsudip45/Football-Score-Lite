@@ -13,8 +13,15 @@ import MatchOfficials from '@/components/graphics/MatchOfficials';
 import MatchStatsFullScreen from '@/components/graphics/MatchStatsFullScreen';
 import { useGraphicsCustomizationSync } from '@/lib/graphics-customization-store';
 import { useGraphicsCustomizationStore } from '@/lib/graphics-customization-store';
+import type { GraphicCustomization, GraphicPosition } from '@/lib/graphics-customization-store';
 
-const WS_URL = 'ws://localhost:8080';
+function getWsUrl(): string {
+  if (typeof window === 'undefined') return 'ws://localhost:8080';
+  const host = window.location.hostname;
+  // file:// in Electron production has empty hostname
+  if (!host || host === 'localhost' || host === '127.0.0.1') return 'ws://localhost:8080';
+  return `ws://${host}:8080`;
+}
 
 interface GraphicsState {
   scoreBug: {
@@ -111,6 +118,9 @@ interface GraphicsState {
     teamColor: string;
     teamSecondaryColor?: string;
     teamLogo?: string;
+    tournamentShortName?: string;
+    tournamentLogo?: string;
+    tournamentColor?: string;
     formation: string;
     players: any[];
     subs: any[];
@@ -173,7 +183,7 @@ const defaultState: GraphicsState = {
   substitution: { visible: false, playerIn: '', playerOut: '', numberIn: '', numberOut: '', teamColor: '#14b8a6', teamLogo: '', team: 'home' as 'home' | 'away', homeColors: { primary: '#A50044', secondary: '#A50044' }, awayColors: { primary: '#00529F', secondary: '#00529F' } },
   vsGraphic: { visible: false, variant: 'vs', homeTeam: { name: 'Home', color: '#A50044', secondaryColor: '#A50044', logo: '', score: 0 }, awayTeam: { name: 'Away', color: '#00529F', secondaryColor: '#00529F', logo: '', score: 0 }, matchInfo: '', competition: '', competitionLogo: '', tournamentColor: '' },
   nameplate: { visible: false, playerName: '', position: '', number: '', teamColor: '#14b8a6', teamLogo: '', team: 'home' as 'home' | 'away', homeColors: { primary: '#A50044', secondary: '#A50044' }, awayColors: { primary: '#00529F', secondary: '#00529F' } },
-  lineup: { visible: false, team: 'home', teamName: '', teamColor: '#14b8a6', teamSecondaryColor: '#14b8a6', formation: '4-3-3', players: [], subs: [], coach: '' },
+  lineup: { visible: false, team: 'home', teamName: '', teamColor: '#14b8a6', teamSecondaryColor: '#14b8a6', teamLogo: '', tournamentShortName: 'NSL', tournamentLogo: '', tournamentColor: '#EF3E42', formation: '4-3-3', players: [], subs: [], coach: '' },
   matchStatsLowerThird: { 
     visible: false, 
     homeTeam: { name: 'Home', color: '#EF3E42', secondaryColor: '#EF3E42', score: 0, scorers: [] }, 
@@ -252,6 +262,71 @@ export default function RendererPage() {
     matchStatsFullScreen: 'hidden',
     matchOfficials: 'hidden',
   });
+
+  const scoreBugCustomization = useGraphicsCustomizationStore((s) => s.scoreBug);
+  const lowerThirdCustomization = useGraphicsCustomizationStore((s) => s.lowerThird);
+  const goalHomeCustomization = useGraphicsCustomizationStore((s) => s.goalHome);
+  const goalAwayCustomization = useGraphicsCustomizationStore((s) => s.goalAway);
+  const cardHomeCustomization = useGraphicsCustomizationStore((s) => s.cardHome);
+  const cardAwayCustomization = useGraphicsCustomizationStore((s) => s.cardAway);
+  const substitutionHomeCustomization = useGraphicsCustomizationStore((s) => s.substitutionHome);
+  const substitutionAwayCustomization = useGraphicsCustomizationStore((s) => s.substitutionAway);
+  const nameplateHomeCustomization = useGraphicsCustomizationStore((s) => s.nameplateHome);
+  const nameplateAwayCustomization = useGraphicsCustomizationStore((s) => s.nameplateAway);
+  const vsGraphicCustomization = useGraphicsCustomizationStore((s) => s.vsGraphic);
+  const lineupCustomization = useGraphicsCustomizationStore((s) => s.lineup);
+  const breakingBannerCustomization = useGraphicsCustomizationStore((s) => s.breakingBanner);
+  const matchStatsCustomization = useGraphicsCustomizationStore((s) => s.matchStats);
+  const matchStatsFullScreenCustomization = useGraphicsCustomizationStore((s) => s.matchStatsFullScreen);
+  const matchOfficialsCustomization = useGraphicsCustomizationStore((s) => s.matchOfficials);
+
+  const getTransformOrigin = (pos?: Partial<GraphicPosition>): React.CSSProperties['transformOrigin'] => {
+    const hasTop = pos?.top !== undefined;
+    const hasBottom = pos?.bottom !== undefined;
+    const hasLeft = pos?.left !== undefined;
+    const hasRight = pos?.right !== undefined;
+
+    const y = hasBottom && !hasTop ? 'bottom' : 'top';
+    const x = hasRight && !hasLeft ? 'right' : 'left';
+    return `${y} ${x}`;
+  };
+
+  const getWrapperStyle = (
+    customization: GraphicCustomization | undefined,
+    fallbackAnchors: Partial<GraphicPosition>,
+    options?: { baseTransform?: string; transformOrigin?: React.CSSProperties['transformOrigin'] }
+  ): React.CSSProperties => {
+    const position = customization?.position;
+    const scale = customization?.scale ?? 1;
+    const opacity = customization?.opacity ?? 1;
+
+    // Normalize anchors:
+    // - If bottom is set, ignore top (prevents accidental pinning/stretching)
+    // - If right is set, ignore left
+    // This matches how the renderer wrappers were historically positioned.
+    const resolvedBottom = position?.bottom ?? fallbackAnchors.bottom;
+    const resolvedTop = resolvedBottom !== undefined ? undefined : (position?.top ?? fallbackAnchors.top);
+    const resolvedRight = position?.right ?? fallbackAnchors.right;
+    const resolvedLeft = resolvedRight !== undefined ? undefined : (position?.left ?? fallbackAnchors.left);
+
+    const anchors: Partial<GraphicPosition> = {
+      ...(resolvedTop !== undefined ? { top: resolvedTop } : {}),
+      ...(resolvedBottom !== undefined ? { bottom: resolvedBottom } : {}),
+      ...(resolvedLeft !== undefined ? { left: resolvedLeft } : {}),
+      ...(resolvedRight !== undefined ? { right: resolvedRight } : {}),
+    };
+
+    const baseTransform = options?.baseTransform?.trim();
+    const transform = baseTransform ? `${baseTransform} scale(${scale})` : `scale(${scale})`;
+
+    return {
+      ...anchors,
+      overflow: 'visible',
+      transform,
+      transformOrigin: options?.transformOrigin ?? getTransformOrigin(position ?? fallbackAnchors),
+      opacity,
+    };
+  };
   const [prevVisible, setPrevVisible] = useState<Record<string, boolean>>({
     scoreBug: false,
     lowerThird: false,
@@ -342,7 +417,7 @@ export default function RendererPage() {
     let reconnectTimeout: NodeJS.Timeout | null = null;
     
     const connect = () => {
-      ws = new WebSocket(WS_URL);
+      ws = new WebSocket(getWsUrl());
       
       ws.onopen = () => {
         console.log('[Renderer] Connected to WebSocket');
@@ -453,11 +528,24 @@ export default function RendererPage() {
         <div
           className="absolute z-50"
           style={{
-            top: 70,
-            left: 64,
+            ...(scoreBugCustomization?.position?.top !== undefined
+              ? { top: scoreBugCustomization.position.top }
+              : { top: 70 }),
+            ...(scoreBugCustomization?.position?.bottom !== undefined
+              ? { bottom: scoreBugCustomization.position.bottom }
+              : {}),
+            ...(scoreBugCustomization?.position?.left !== undefined
+              ? { left: scoreBugCustomization.position.left }
+              : { left: 64 }),
+            ...(scoreBugCustomization?.position?.right !== undefined
+              ? { right: scoreBugCustomization.position.right }
+              : {}),
             overflow: 'visible',
             minWidth: '800px',
             position: 'relative',
+            transform: `scale(${scoreBugCustomization?.scale ?? 1})`,
+            transformOrigin: 'top left',
+            opacity: scoreBugCustomization?.opacity ?? 1,
           }}
         >
           <LiveScoreBug 
@@ -500,7 +588,13 @@ export default function RendererPage() {
 
       {/* Goal Graphic - Bottom Left */}
       {shouldRender('goal') && (
-        <div className="absolute bottom-52 left-16 z-40">
+        <div
+          className="absolute z-40"
+          style={getWrapperStyle(
+            state.goal.team === 'home' ? goalHomeCustomization : goalAwayCustomization,
+            { left: 64, bottom: 208 }
+          )}
+        >
           <EventOverlay 
             animate={getAnimateState('goal')}
             variant="player-highlight"
@@ -517,7 +611,13 @@ export default function RendererPage() {
 
       {/* Card Graphic - Bottom Left */}
       {shouldRender('card') && (
-        <div className="absolute bottom-52 left-16 z-40">
+        <div
+          className="absolute z-40"
+          style={getWrapperStyle(
+            state.card.team === 'home' ? cardHomeCustomization : cardAwayCustomization,
+            { left: 64, bottom: 208 }
+          )}
+        >
           <EventOverlay 
             animate={getAnimateState('card')}
             variant={state.card.cardType === 'red' ? 'red-card' : 'yellow-card'}
@@ -533,7 +633,13 @@ export default function RendererPage() {
 
       {/* Substitution Graphic - Bottom Left */}
       {shouldRender('substitution') && (
-        <div className="absolute bottom-52 left-16 z-40">
+        <div
+          className="absolute z-40"
+          style={getWrapperStyle(
+            state.substitution.team === 'home' ? substitutionHomeCustomization : substitutionAwayCustomization,
+            { left: 64, bottom: 208 }
+          )}
+        >
           <SubstitutionOverlay 
             animate={getAnimateState('substitution')}
             playerIn={state.substitution.numberIn ? `${state.substitution.numberIn}. ${state.substitution.playerIn}` : state.substitution.playerIn}
@@ -549,7 +655,13 @@ export default function RendererPage() {
 
       {/* Nameplate - Bottom Left */}
       {shouldRender('nameplate') && (
-        <div className="absolute bottom-40 left-16 z-40">
+        <div
+          className="absolute z-40"
+          style={getWrapperStyle(
+            state.nameplate.team === 'home' ? nameplateHomeCustomization : nameplateAwayCustomization,
+            { left: 64, bottom: 160 }
+          )}
+        >
           <EventOverlay 
             animate={getAnimateState('nameplate')}
             variant="coach"
@@ -566,7 +678,10 @@ export default function RendererPage() {
 
       {/* VS Graphic - Full Screen */}
       {shouldRender('vsGraphic') && (
-        <div className="absolute inset-0 z-30">
+        <div
+          className="absolute z-30"
+          style={getWrapperStyle(vsGraphicCustomization, { top: 0, left: 0, right: 0, bottom: 0 })}
+        >
           <VersusScreen 
             animate={getAnimateState('vsGraphic')}
             variant={state.vsGraphic.variant || 'vs'}
@@ -594,13 +709,19 @@ export default function RendererPage() {
 
       {/* Lineup - Full Screen */}
       {shouldRender('lineup') && (
-        <div className="absolute inset-0 z-30">
+        <div
+          className="absolute z-30"
+          style={getWrapperStyle(lineupCustomization, { top: 0, left: 0, right: 0, bottom: 0 })}
+        >
           <StartingLineup 
             animate={getAnimateState('lineup')}
             teamName={state.lineup.teamName}
             teamColor={state.lineup.teamColor}
             teamSecondaryColor={state.lineup.teamSecondaryColor}
             teamLogo={state.lineup.teamLogo}
+            tournamentShortName={state.lineup.tournamentShortName}
+            tournamentLogo={state.lineup.tournamentLogo}
+            tournamentColor={state.lineup.tournamentColor}
             formation={state.lineup.formation}
             players={state.lineup.players.map((p: any) => ({
               name: p.name,
@@ -619,7 +740,10 @@ export default function RendererPage() {
 
       {/* Match Stats - Full Screen */}
       {shouldRender('matchStatsFullScreen') && (
-        <div className="absolute inset-0 z-30">
+        <div
+          className="absolute z-30"
+          style={getWrapperStyle(matchStatsFullScreenCustomization, { top: 0, left: 0, right: 0, bottom: 0 })}
+        >
           <MatchStatsFullScreen
             animate={getAnimateState('matchStatsFullScreen')}
             homeTeam={state.matchStatsFullScreen.homeTeam}
@@ -631,7 +755,10 @@ export default function RendererPage() {
 
       {/* Lower Third - Bottom Left */}
       {shouldRender('lowerThird') && (
-        <div className="absolute bottom-40 left-16 z-40">
+        <div
+          className="absolute z-40"
+          style={getWrapperStyle(lowerThirdCustomization, { left: 64, bottom: 160 })}
+        >
           <LowerThird 
             animate={getAnimateState('lowerThird')}
             title={state.lowerThird.title}
@@ -643,7 +770,15 @@ export default function RendererPage() {
 
       {/* Match Stats Lower Third - Bottom Center */}
       {shouldRender('matchStatsLowerThird') && (
-        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-40 overflow-visible">
+        <div
+          className="absolute z-40 overflow-visible"
+          style={getWrapperStyle(
+            matchStatsCustomization,
+            // Match Stats Lower Third is centered; left = center X in px
+            { left: 960, bottom: 64 },
+            { baseTransform: 'translateX(-50%)', transformOrigin: 'bottom center' }
+          )}
+        >
           <MatchStatsLowerThird 
             animate={getAnimateState('matchStatsLowerThird')}
             homeTeam={{
@@ -675,7 +810,10 @@ export default function RendererPage() {
 
       {/* Match Officials - Bottom Left (same position as cards/substitution) */}
       {shouldRender('matchOfficials') && (
-        <div className="absolute bottom-10 left-16 z-40">
+        <div
+          className="absolute z-40"
+          style={getWrapperStyle(matchOfficialsCustomization, { left: 64, bottom: 40 })}
+        >
           <MatchOfficials 
             animate={getAnimateState('matchOfficials')}
             officials={state.matchOfficials.officials}
@@ -688,7 +826,10 @@ export default function RendererPage() {
 
       {/* Breaking Banner - Bottom */}
       {shouldRender('breakingBanner') && (
-        <div className="absolute bottom-0 left-0 right-0 z-60">
+        <div
+          className="absolute z-60"
+          style={getWrapperStyle(breakingBannerCustomization, { left: 0, right: 0, bottom: 0 })}
+        >
           <BreakingBanner 
             animate={getAnimateState('breakingBanner')}
             text={state.breakingBanner.text}

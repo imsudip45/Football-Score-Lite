@@ -262,7 +262,24 @@ export const useAppStore = create<AppState>()(
       // Timer
       timerRunning: false,
       matchTime: 0,
-      setTimerRunning: (running) => set({ timerRunning: running }),
+      setTimerRunning: (running) => {
+        set({ timerRunning: running })
+
+        if (!running) return
+
+        const { currentMatch, updateMatch } = get()
+        if (!currentMatch) return
+
+        // Recovery modal relies on status === 'live'.
+        // If the user starts the timer from a draft/ready state, ensure the match is marked live.
+        if (
+          currentMatch.status !== "live" &&
+          currentMatch.status !== "completed" &&
+          currentMatch.status !== "abandoned"
+        ) {
+          updateMatch({ status: "live" })
+        }
+      },
       setMatchTime: (time) => set({ matchTime: time }),
 
       // Teams

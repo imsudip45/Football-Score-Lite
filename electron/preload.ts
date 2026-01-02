@@ -24,10 +24,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
     list: () => ipcRenderer.invoke('renderer:list'),
   },
 
+  commentator: {
+    open: (url: string) => ipcRenderer.invoke('commentator:open', url),
+  },
+
   // App info
   app: {
     getVersion: () => ipcRenderer.invoke('app:get-version'),
     getPath: (name: 'userData' | 'documents' | 'downloads') => ipcRenderer.invoke('app:get-path', name),
+  },
+
+  // Network info (LAN sharing)
+  network: {
+    getInfo: () => ipcRenderer.invoke('network:get-info') as Promise<{ ip: string; port: number }>,
   },
 })
 

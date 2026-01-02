@@ -19,9 +19,17 @@ declare global {
         close: (type: string) => Promise<{ success: boolean }>
         list: () => Promise<string[]>
       }
+
+      commentator: {
+        open: (url: string) => Promise<{ success: boolean; id?: number }>
+      }
       app: {
         getVersion: () => Promise<string>
         getPath: (name: 'userData' | 'documents' | 'downloads') => Promise<string>
+      }
+
+      network: {
+        getInfo: () => Promise<{ ip: string; port: number }>
       }
     }
   }

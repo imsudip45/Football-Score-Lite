@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, protocol, session } from 'electron
 import { join, normalize, sep } from 'path'
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
-import { startWebSocketServer, startHttpServer } from './server'
+import { startWebSocketServer, startHttpServer, startAssetsServer, getLocalIP } from './server'
 
 // Allow `app-assets://...` URLs to be used for loading local userData assets (images).
 protocol.registerSchemesAsPrivileged([
@@ -13,9 +13,11 @@ const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
 let mainWindow: BrowserWindow | null = null
 let rendererWindows: Map<string, BrowserWindow> = new Map()
+let commentatorWindow: BrowserWindow | null = null
 
 const WS_PORT = 8080
 const HTTP_PORT = 3000
+const ASSETS_HTTP_PORT = 3002
 
 function getAssetsDir(): string {
   return join(app.getPath('userData'), 'assets')
@@ -41,6 +43,42 @@ function getAppPath(): string {
   return app.getAppPath()
 }
 
+function createCommentatorWindow(url: string) {
+  if (commentatorWindow && !commentatorWindow.isDestroyed()) {
+    commentatorWindow.focus()
+    return commentatorWindow
+  }
+
+  commentatorWindow = new BrowserWindow({
+    width: 1280,
+    height: 720,
+    title: 'Commentator',
+    webPreferences: {
+      preload: join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+    },
+    backgroundColor: '#000000',
+    show: false,
+    autoHideMenuBar: true,
+    resizable: true,
+  })
+
+  commentatorWindow.setMenuBarVisibility(false)
+  commentatorWindow.loadURL(url)
+
+  commentatorWindow.once('ready-to-show', () => {
+    commentatorWindow?.maximize()
+    commentatorWindow?.show()
+  })
+
+  commentatorWindow.on('closed', () => {
+    commentatorWindow = null
+  })
+
+  return commentatorWindow
+}
+
 // Create renderer windows for graphics output
 function createRendererWindow(type: string, url: string) {
   const existing = rendererWindows.get(type)
@@ -61,9 +99,15 @@ function createRendererWindow(type: string, url: string) {
     },
     backgroundColor: '#000000',
     show: false,
-    frame: false,
+    // Use a normal framed window so "maximize" is visibly distinct from fullscreen on Windows.
+    frame: true,
     autoHideMenuBar: true,
-    resizable: false,
+    // Requested UX: open maximized. Keep it resizable/maximizable for that.
+    // Note: for OBS browser-source capture, users typically use the /renderer URL,
+    // so maximizing this preview window is fine.
+    resizable: true,
+    fullscreen: false,
+    kiosk: false,
     fullscreenable: false,
     alwaysOnTop: false,
   })
@@ -98,8 +142,9 @@ function createRendererWindow(type: string, url: string) {
         })
       }
 
-      // When not fullscreen, keep a true 1920x1080 content area.
-      if (!window.isFullScreen()) {
+      // When not fullscreen/maximized, keep a true 1920x1080 content area.
+      // If the window is maximized, don't fight the OS sizing.
+      if (!window.isFullScreen() && !window.isMaximized()) {
         window.setContentSize(1920, 1080)
       }
     } catch {
@@ -122,6 +167,14 @@ function createRendererWindow(type: string, url: string) {
   window.webContents.on('leave-html-full-screen', enforceRendererView)
 
   window.once('ready-to-show', () => {
+    // Ensure we don't end up in fullscreen/kiosk (some GPUs/shortcuts can toggle it).
+    try {
+      window.setKiosk(false)
+      window.setFullScreen(false)
+    } catch {
+      // ignore
+    }
+    window.maximize()
     window.show()
   })
 
@@ -174,6 +227,8 @@ function createMainWindow() {
   })
 
   mainWindow.once('ready-to-show', () => {
+    // Always start maximized (requested UX)
+    mainWindow?.maximize()
     mainWindow?.show()
   })
 
@@ -276,6 +331,12 @@ function setupIpcHandlers() {
     return { success: true, id: window.id }
   })
 
+  ipcMain.handle('commentator:open', (_event, url?: string) => {
+    const commentatorUrl = url || 'http://localhost:3000/commentator'
+    const window = createCommentatorWindow(commentatorUrl)
+    return { success: true, id: window.id }
+  })
+
   ipcMain.handle('renderer:close', (_event, type: string) => {
     const window = rendererWindows.get(type)
     if (window && !window.isDestroyed()) {
@@ -297,6 +358,13 @@ function setupIpcHandlers() {
   ipcMain.handle('app:get-path', (_event, name: 'userData' | 'documents' | 'downloads') => {
     return app.getPath(name)
   })
+
+  ipcMain.handle('network:get-info', () => {
+    return {
+      ip: getLocalIP(),
+      port: 3000,
+    }
+  })
 }
 
 app.whenReady().then(() => {
@@ -308,8 +376,8 @@ app.whenReady().then(() => {
           ...details.responseHeaders,
           'Content-Security-Policy': [
             isDev
-              ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: ws://localhost:* http://localhost:*; img-src 'self' data: blob: app-assets: https:; font-src 'self' data:; connect-src 'self' ws://localhost:* http://localhost:* ws://127.0.0.1:*"
-              : "default-src 'self' 'unsafe-inline' data: blob: file:; img-src 'self' data: blob: app-assets: file:; font-src 'self' data: file:; connect-src 'self' ws://localhost:* ws://127.0.0.1:* http://localhost:*"
+              ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: ws://localhost:* http://localhost:*; img-src 'self' data: blob: app-assets: https: http:; font-src 'self' data:; connect-src 'self' ws: http: https:"
+              : "default-src 'self' 'unsafe-inline' data: blob: file:; img-src 'self' data: blob: app-assets: file: http:; font-src 'self' data: file:; connect-src 'self' ws: http:"
           ]
         }
       })
@@ -336,6 +404,11 @@ app.whenReady().then(() => {
     // Start WebSocket server
     startWebSocketServer(WS_PORT)
     console.log('[Electron] WebSocket server started on port', WS_PORT)
+
+    // Start an assets server so external browsers can load userData assets.
+    // (Electron itself can use app-assets://, but normal browsers cannot.)
+    startAssetsServer(ASSETS_HTTP_PORT, getAssetsDir())
+    console.log('[Electron] Assets server started on port', ASSETS_HTTP_PORT)
 
     // Start HTTP server to serve static files (renderer pages)
     // Only in production - in dev, Next.js dev server handles this

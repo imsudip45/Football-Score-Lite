@@ -4,7 +4,12 @@ import { useGraphicsStore } from '@/lib/graphics-store'
 import { useGraphicsCustomizationStore } from '@/lib/graphics-customization-store'
 import type { TickerItem } from '@/lib/types'
 
-const WS_URL = 'ws://localhost:8080'
+function getWsUrl(): string {
+  if (typeof window === 'undefined') return 'ws://localhost:8080'
+  const host = window.location.hostname
+  if (!host || host === 'localhost' || host === '127.0.0.1') return 'ws://localhost:8080'
+  return `ws://${host}:8080`
+}
 const MAX_OUTBOUND_BYTES = 5 * 1024 * 1024 // 5MB limit for base64 images
 const MAX_RECONNECT_ATTEMPTS = 50
 const MAX_QUEUE_SIZE = 100
@@ -174,7 +179,7 @@ export function useWebSocket() {
       }
 
       try {
-        const ws = new WebSocket(WS_URL)
+        const ws = new WebSocket(getWsUrl())
         wsRef.current = ws
 
         ws.onopen = () => {
@@ -306,6 +311,12 @@ export function useWebSocket() {
     const homeScore = currentMatch?.homeScore ?? 0
     const awayScore = currentMatch?.awayScore ?? 0
 
+    const events = currentMatch?.events || []
+    const yellowFor = (team: 'home' | 'away') =>
+      events.filter((e: any) => e.team === team && e.type === 'yellow').length
+    const redFor = (team: 'home' | 'away') =>
+      events.filter((e: any) => e.team === team && (e.type === 'red' || e.type === 'second-yellow')).length
+
     const state = {
       scoreBug: {
         visible: scoreBugVisible,
@@ -328,6 +339,8 @@ export function useWebSocket() {
           color: homeTeam.primaryColor,
           secondaryColor: homeTeam.secondaryColor || homeTeam.primaryColor,
           logo: stripLargeDataUrl(homeTeam.logo || ''),
+          yellowCards: yellowFor('home'),
+          redCards: redFor('home'),
         },
         awayTeam: {
           name: awayTeam.name,
@@ -336,6 +349,8 @@ export function useWebSocket() {
           color: awayTeam.primaryColor,
           secondaryColor: awayTeam.secondaryColor || awayTeam.primaryColor,
           logo: stripLargeDataUrl(awayTeam.logo || ''),
+          yellowCards: yellowFor('away'),
+          redCards: redFor('away'),
         },
         timer: {
           minutes: Math.floor(matchTime / 60),
@@ -463,6 +478,13 @@ export function useWebSocket() {
           ? (awayTeam.secondaryColor || awayTeam.primaryColor)
           : (homeTeam.secondaryColor || homeTeam.primaryColor),
         teamLogo: stripLargeDataUrl(lineupData?.teamLogo || (lineupData?.team === 'away' ? awayTeam.logo : homeTeam.logo) || ''),
+        tournamentShortName: currentMatch?.competitionShortName || 
+          (currentMatch?.competition ? 
+            (currentMatch.competition.length <= 5 ? currentMatch.competition : 
+             currentMatch.competition.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 4)) 
+            : 'NSL'),
+        tournamentLogo: stripLargeDataUrl(currentMatch?.competitionLogo || ''),
+        tournamentColor: currentMatch?.tournamentColor || '#EF3E42',
         formation: lineupData?.formation || '4-3-3',
         players: (lineupData?.players || []).map(p => ({
           number: p.number,
