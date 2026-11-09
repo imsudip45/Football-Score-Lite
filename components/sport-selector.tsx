@@ -30,7 +30,7 @@ export function SportSelector() {
           </div>
           <h1 className="text-3xl font-bold text-foreground">Football Score Pro</h1>
           <p className="text-lg text-primary font-medium">Lite</p>
-          <p className="mt-2 text-muted-foreground">Professional match graphics Controller for local tournaments</p>
+          <p className="mt-2 text-muted-foreground">Match graphics controller for local tournaments</p>
         </div>
 
         {/* Sport Selection */}
