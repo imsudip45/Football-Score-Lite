@@ -1,5 +1,6 @@
-import { app, BrowserWindow, ipcMain, dialog, protocol, session } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, protocol, session, net } from 'electron'
 import { join, normalize, sep } from 'path'
+import { pathToFileURL } from 'url'
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import { startWebSocketServer, startHttpServer, startAssetsServer, getLocalIP } from './server'
@@ -384,20 +385,23 @@ app.whenReady().then(() => {
     })
 
     // Register protocol for userData assets
-    protocol.registerFileProtocol('app-assets', (request, callback) => {
+    // protocol.handle replaces the deprecated registerFileProtocol API
+    protocol.handle('app-assets', (request) => {
       try {
         const url = new URL(request.url)
         // Support both:
         // - app-assets:///images/foo.png  -> host: "" , pathname: "/images/foo.png"
         // - app-assets://images/foo.png  -> host: "images", pathname: "/foo.png"
         const rawRel = url.host ? `${url.host}${url.pathname || ''}` : (url.pathname || '')
-        const rel = decodeURIComponent(rawRel).replace(/^\/+/, '')
+        // Standard schemes get a trailing slash when the path is empty
+        // (app-assets:///a.png arrives as app-assets://a.png/), so trim both ends.
+        const rel = decodeURIComponent(rawRel).replace(/^\/+/, '').replace(/\/+$/, '')
         const safeRel = sanitizeRelativePath(rel)
         const absPath = join(getAssetsDir(), safeRel)
-        callback({ path: absPath })
+        return net.fetch(pathToFileURL(absPath).toString())
       } catch (_e) {
         // Fail closed
-        callback({ error: -6 }) // net::ERR_FILE_NOT_FOUND
+        return new Response('Not found', { status: 404 })
       }
     })
 

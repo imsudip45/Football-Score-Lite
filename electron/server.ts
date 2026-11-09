@@ -716,8 +716,9 @@ export function startHttpServer(port: number, staticPath: string) {
       // Construct file path
       const filePath = join(staticFilesPath, url)
       
-      // Security: prevent directory traversal
-      if (!filePath.startsWith(staticFilesPath)) {
+      // Security: prevent directory traversal (compare with a trailing
+      // separator so "/out-other" can't pass as being inside "/out")
+      if (filePath !== staticFilesPath && !filePath.startsWith(staticFilesPath.endsWith(sep) ? staticFilesPath : staticFilesPath + sep)) {
         res.writeHead(403)
         res.end('Forbidden')
         return
