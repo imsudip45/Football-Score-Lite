@@ -139,7 +139,7 @@ const MatchOfficials: React.FC<MatchOfficialsProps> = ({
                 className="tracking-tight text-center px-2"
                 style={{ 
                   color: getColor('sidebar') || tournamentColor,
-                  fontFamily: "'Snasm', sans-serif",
+                  fontFamily: "'Snasm', var(--font-bebas), sans-serif",
                   fontSize: `${getFontSizeValue('sidebar') || 30}px`,
                   fontStyle: 'italic',
                   ...getTextStyleValue('sidebar'),
@@ -158,7 +158,7 @@ const MatchOfficials: React.FC<MatchOfficialsProps> = ({
                 style={{ 
                   color: getColor('sidebar') || tournamentColor,
                   fontSize: `${getFontSizeValue('sidebar') || 30}px`,
-                  fontFamily: "'Snasm', sans-serif",
+                  fontFamily: "'Snasm', var(--font-bebas), sans-serif",
                   fontStyle: 'italic',
                   ...getTextStyleValue('sidebar'),
                 }}

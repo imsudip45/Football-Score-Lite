@@ -429,7 +429,7 @@ const LiveScoreBug: React.FC<LiveScoreBugProps> = ({
             <span 
               className="text-center leading-tight italic text-white"
               style={{ 
-                fontFamily: "'Snasm', sans-serif",
+                fontFamily: "'Snasm', var(--font-bebas), sans-serif",
                 fontSize: (leagueShortName || leagueName).length <= 3 ? '2.25rem' : (leagueShortName || leagueName).length <= 5 ? '1.5rem' : (leagueShortName || leagueName).length <= 8 ? '1rem' : '0.75rem',
                 wordBreak: 'break-word',
                 maxWidth: '100%',

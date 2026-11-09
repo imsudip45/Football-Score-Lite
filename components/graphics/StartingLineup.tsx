@@ -512,7 +512,7 @@ const StartingLineup: React.FC<StartingLineupProps> = ({
                   <div
                     className="text-[58px] leading-none uppercase whitespace-nowrap italic"
                     style={{
-                      fontFamily: "'Snasm', sans-serif",
+                      fontFamily: "'Snasm', var(--font-bebas), sans-serif",
                       color: tournamentColor || '#EF3E42',
                     }}
                   >

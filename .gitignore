@@ -76,3 +76,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+
+# Licensed display font, not redistributable; add your own copy locally
+Snasm-W05-Regular.ttf
+public/Snasm-W05-Regular.ttf

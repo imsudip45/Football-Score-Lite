@@ -1,104 +1,79 @@
 # Football Score Lite
 
-Professional football graphics control system for local tournaments, built with Electron, React, and WebSocket-synced graphics.
+A desktop app for putting live match graphics on a football or futsal
+stream. The operator runs the match from one window (score, clock, goals,
+cards, substitutions) and the graphics render in a separate page that OBS
+captures as a browser source.
 
-## Features
+I built it at FutureFrame (Lalitpur, Nepal) as the lighter companion to
+[Football Score Pro](https://github.com/imsudip45/fsp). It is a Next.js app
+packaged with Electron.
 
-- **Match Management**: Create and manage football matches with teams, lineups, and officials
-- **Live Control**: Real-time score bug, timer, events, and graphics control
-- **Graphics Output**: Unified React renderer output for OBS / browser sources
-- **WebSocket Sync**: Real-time synchronization across all renderer windows
-- **Local Persistence**: Save/load matches, teams, and assets locally
-- **Modern UI**: Beautiful dark theme with glassy effects
+![Start screen](docs/start-screen.png)
 
-## Development
+## What it does
 
-### Prerequisites
+- **Setup**: tournaments, fixtures, teams and lineups (with formations),
+  officials, and an asset library for logos. Teams and officials can be
+  imported from CSV (samples in `public/sample-data/`).
+- **Live control**: match clock, score, goals, cards, substitutions and
+  match stats, with keyboard shortcuts for the common actions.
+- **Graphics**: score bug, lower thirds, breaking-news banner, goal/card
+  overlays, substitution overlay, starting lineups, versus screen, match
+  officials and a stats lower third. Colours, patterns and text styles can
+  be customised and exported.
+- **Commentator view**: a read-only page with lineups, events and stats that
+  commentators can open on another device on the same network.
+- **Local storage**: matches and settings are kept in IndexedDB (Dexie);
+  uploaded images are saved under Electron's user-data folder.
 
-- Node.js 18+
-- pnpm (or npm)
+## How it fits together
 
-### Setup
+```
+Operator window (Next.js UI in Electron)
+        │  state updates
+        ▼
+WebSocket server (electron/server.ts, port 8080)
+        │  broadcasts state
+        ├──► /renderer        → OBS browser source
+        ├──► renderer windows → preview on the operator machine
+        └──► /commentator     → commentators' devices
+```
+
+In the packaged app Electron also serves the static build on port 3000 and
+user-uploaded images on port 3002, so OBS or another machine can load them.
+These servers listen on all network interfaces so other devices on the
+production network can connect; run the app on a trusted network.
+
+## Run it
+
+Node.js 20 or newer and pnpm.
 
 ```bash
-# Install dependencies
 pnpm install
-
-# Note: If Electron fails to start, manually run:
-# node node_modules/.pnpm/electron@*/node_modules/electron/install.js
-
-# Start Next.js dev server
-pnpm dev
-
-# In another terminal, build and run Electron
-pnpm electron:build
-pnpm electron
-
-# Or use the combined dev command
-pnpm dev:electron
+pnpm dev:electron        # Next.js dev server + Electron
 ```
 
-**Troubleshooting Electron Installation:**
-If you see "Electron failed to install correctly", run:
-```bash
-node node_modules/.pnpm/electron@*/node_modules/electron/install.js
-```
-This downloads the Electron binary manually (pnpm sometimes skips postinstall scripts).
+Or run the pieces separately: `pnpm dev`, then `pnpm electron:start`.
 
-### Project Structure
+For OBS, add a browser source pointing at `http://localhost:3000/renderer`
+(1920×1080).
 
-```
-Football-Score-Lite/
-├── electron/           # Electron main process
-│   ├── main.ts        # Main process entry
-│   ├── preload.ts     # Preload script (IPC bridge)
-│   └── server.ts      # WebSocket server
-├── public/            # Static assets
-├── app/               # Next.js app directory
-├── components/        # React components
-├── hooks/            # React hooks (WebSocket, file persistence)
-└── lib/              # Store and utilities
-```
-
-## Building
+### Build installers
 
 ```bash
-# Build Next.js app
-pnpm build
-
-# Build Electron TypeScript
-pnpm electron:build
-
-# Run Electron
-pnpm electron
-
-# Build distributable packages
-pnpm dist:win    # Windows
-pnpm dist:mac    # macOS
-pnpm dist:linux  # Linux
+pnpm dist:win            # or dist:mac / dist:linux
 ```
 
-## Usage
+## Notes
 
-1. **Start the app**: Run `pnpm dev:electron`
-2. **Select Sport**: Choose Football or Futsal
-3. **Create Match**: Set up teams, lineups, and match details
-4. **Go Live**: Use Live Control to manage the match
-5. **Graphics**: Open renderer windows for OBS integration
+- The broadcast designs used a licensed display font, Snasm W05, which is
+  not included. Graphics fall back to Bebas Neue; to use Snasm, put
+  `Snasm-W05-Regular.ttf` in `public/`.
+- Built mostly in late 2025. After I left the project I updated the
+  dependencies (Electron 45, Next.js 16.4) and fixed loading of uploaded
+  images in Electron. See the commit history.
 
-## Renderer URLs
+## Licence
 
-For OBS Browser Sources, use these URLs:
-- Main Renderer Output: `http://localhost:3000/renderer`
-
-## WebSocket Server
-
-The WebSocket server runs on `ws://localhost:8080` and synchronizes graphics state across all renderer windows.
-
-## License
-
-MIT
-
-## About
-
-Football Score Lite is a professional-grade graphics control system designed for local football tournaments and live streaming productions.
+MIT, see [LICENSE](LICENSE).

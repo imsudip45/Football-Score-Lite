@@ -260,7 +260,7 @@ export default function MatchStatsLowerThird({
               <span 
                 className="uppercase tracking-wider text-center italic font-bold text-white"
                 style={{ 
-                  fontFamily: "'Snasm', sans-serif",
+                  fontFamily: "'Snasm', var(--font-bebas), sans-serif",
                   fontSize: (leagueShortName || leagueName).length <= 3 ? '2.5rem' : (leagueShortName || leagueName).length <= 5 ? '1.75rem' : '1.25rem',
                   textShadow: '0 1px 2px rgba(0,0,0,0.3)'
                 }}
@@ -291,7 +291,7 @@ export default function MatchStatsLowerThird({
               <span 
                 className="uppercase tracking-wider text-center italic font-bold text-white"
                 style={{ 
-                  fontFamily: "'Snasm', sans-serif",
+                  fontFamily: "'Snasm', var(--font-bebas), sans-serif",
                   fontSize: (leagueShortName || leagueName).length <= 3 ? '2.5rem' : (leagueShortName || leagueName).length <= 5 ? '1.75rem' : '1.25rem',
                   textShadow: '0 1px 2px rgba(0,0,0,0.3)'
                 }}
