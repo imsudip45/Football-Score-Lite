@@ -6,7 +6,7 @@ cards, substitutions) and the graphics render in a separate page that OBS
 captures as a browser source.
 
 I built it at FutureFrame (Lalitpur, Nepal) as the lighter companion to
-[Football Score Pro](https://github.com/imsudip45/fsp). It is a Next.js app
+[Football Score Pro](https://github.com/imsudip45/football-score-pro). It is a Next.js app
 packaged with Electron.
 
 ![Start screen](docs/start-screen.png)
